@@ -1,0 +1,2175 @@
+using jargon;
+
+// Minimal Win32 application in Jargon
+// This code creates a simple window and runs a message loop 
+// until the window is closed.
+
+// Constants for window styles and messages
+const int WS_OVERLAPPEDWINDOW = 0x00CF0000;
+const int WS_CHILD = 0x40000000;
+const int WS_VISIBLE = 0x10000000;
+const int WS_POPUP = 0x80000000;
+
+const int CS_VREDRAW = 0x0001;
+const int CS_HREDRAW = 0x0002;
+
+const int CW_USEDEFAULT = 0x80000000;
+
+const int SW_SHOW = 5;
+const int SW_HIDE = 0;
+
+const int SWP_NOSIZE     = 0x0001;
+const int SWP_NOZORDER   = 0x0004;
+
+const int WM_CREATE = 0x0001;
+const int WM_DESTROY = 0x0002;
+const int WM_PAINT = 0x000F;
+const int WM_ERASEBKG = 0x0014;
+const int WM_NCCREATE = 0x0081;
+const int WM_NCDESTROY = 0x0082;
+const int WM_MOUSEMOVE = 0x0200;
+const int WM_LBUTTONDOWN = 0x0201;
+const int WM_LBUTTONUP = 0x0202;
+const int WM_RBUTTONDOWN = 0x0204;
+const int WM_RBUTTONUP = 0x0205;
+const int WM_MOUSEWHEEL = 0x020A;
+
+const int WHEEL_DELTA = 120;
+
+const long IDC_ARROW = 32512;
+
+const int GWLP_USERDATA = -21;
+
+const int WHITE_BRUSH           = 0;
+const int LTGRAY_BRUSH          = 1;
+const int GRAY_BRUSH            = 2;
+const int DKGRAY_BRUSH          = 3;
+const int BLACK_BRUSH           = 4;
+const int NULL_BRUSH            = 5;
+const int HOLLOW_BRUSH          = NULL_BRUSH;
+const int WHITE_PEN             = 6;
+const int BLACK_PEN             = 7;
+const int NULL_PEN              = 8;
+const int OEM_FIXED_FONT        = 10;
+const int ANSI_FIXED_FONT       = 11;
+const int ANSI_VAR_FONT         = 12;
+const int SYSTEM_FONT           = 13;
+const int DEVICE_DEFAULT_FONT   = 14;
+const int DEFAULT_PALETTE       = 15;
+const int SYSTEM_FIXED_FONT     = 16;
+
+const int PS_SOLID            = 0;
+const int PS_DASH             = 1;       /* -------  */
+const int PS_DOT              = 2;       /* .......  */
+const int PS_DASHDOT          = 3;       /* _._._._  */
+const int PS_DASHDOTDOT       = 4;       /* _.._.._  */
+const int PS_NULL             = 5;
+const int PS_INSIDEFRAME      = 6;
+const int PS_USERSTYLE        = 7;
+const int PS_ALTERNATE        = 8;
+const int PS_STYLE_MASK       = 0x0000000F;
+const int PS_ENDCAP_ROUND     = 0x00000000;
+const int PS_ENDCAP_SQUARE    = 0x00000100;
+const int PS_ENDCAP_FLAT      = 0x00000200;
+const int PS_ENDCAP_MASK      = 0x00000F00;
+const int PS_JOIN_ROUND       = 0x00000000;
+const int PS_JOIN_BEVEL       = 0x00001000;
+const int PS_JOIN_MITER       = 0x00002000;
+const int PS_JOIN_MASK        = 0x0000F000;
+const int PS_COSMETIC         = 0x00000000;
+const int PS_GEOMETRIC        = 0x00010000;
+const int PS_TYPE_MASK        = 0x000F0000;
+
+const int TRANSPARENT = 1;
+const int OPAQUE      = 2;
+
+// Bitmap constants
+const int DIB_RGB_COLORS = 0;
+const int BI_RGB = 0;
+const uint SRCCOPY = 0x00CC0020;
+const int LR_LOADFROMFILE = 0x00000010;
+const int IMAGE_BITMAP = 0;
+const int BI_BITFIELDS = 3;
+const int AC_SRC_OVER = 0x00;
+const int AC_SRC_ALPHA = 0x01;
+
+// Structures for window class and messages
+struct WNDCLASSA
+{
+    uint    style;
+    void*   lpfnWndProc;
+    int     cbClsExtra;
+    int     cbWndExtra;
+    long    hInstance;
+    long    hIcon;
+    long    hCursor;
+    long    hbrBackground;
+    byte*   lpszMenuName;
+    byte*   lpszClassName;
+}
+
+struct POINT
+{
+    int x;
+    int y;
+}
+
+struct RECT
+{ 
+    int left;
+    int top;
+    int right;
+    int bottom;
+}
+
+struct SIZE
+{
+    int cx;
+    int cy;
+}
+
+struct MSG
+{
+    long    hwnd;
+    uint    message;
+    ulong   wParam;
+    ulong   lParam;
+    uint    time;
+    POINT   pt;
+}
+
+struct CREATESTRUCTA {
+    long    lpCreateParams;
+    long    hInstance;
+    long    hMenu;
+    long    hwndParent;
+    int     cy;
+    int     cx;
+    int     y;
+    int     x;
+    uint    style;
+    byte*   lpszName;
+    byte*   lpszClass;
+    uint    dwExStyle;
+}
+
+struct PAINTSTRUCT
+{
+    long  hdc;
+    int   fErase;
+    RECT  rcPaint;
+    int   fRestore;
+    int   fIncUpdate;
+    byte  rgbReserved[32];
+}
+
+struct BITMAPINFOHEADER
+{
+    uint   biSize;
+    int    biWidth;
+    int    biHeight;
+    ushort biPlanes;
+    ushort biBitCount;
+    uint   biCompression;
+    uint   biSizeImage;
+    int    biXPelsPerMeter;
+    int    biYPelsPerMeter;
+    uint   biClrUsed;
+    uint   biClrImportant;
+}
+
+struct BITMAPINFO
+{
+    BITMAPINFOHEADER bmiHeader;
+    uint             bmiColors[3];
+}
+
+struct BITMAP
+{
+    int    bmType;
+    int    bmWidth;
+    int    bmHeight;
+    int    bmWidthBytes;
+    ushort bmPlanes;
+    ushort bmBitsPixel;
+    void*  bmBits;
+}
+
+struct BLENDFUNCTION
+{
+    byte BlendOp;
+    byte BlendFlags;
+    byte SourceConstantAlpha;
+    byte AlphaFormat;
+}
+
+// External functions from the Windows API
+void PostQuitMessage(int nExitCode) external;
+long DefWindowProcA(long hwnd, uint uMsg, ulong wParam, ulong lParam) external;
+short RegisterClassA(WNDCLASSA* lpWndClass) external;
+long CreateWindowExA(
+    uint dwExStyle,
+    byte* lpClassName,
+    byte* lpWindowName,
+    uint dwStyle,
+    int X,
+    int Y,
+    int nWidth,
+    int nHeight,
+    long hWndParent,
+    long hMenu,
+    long hInstance,
+    void* lpParam
+) external;
+short GetMessageA(MSG* lpMsg, long hWnd, uint wMsgFilterMin, uint wMsgFilterMax) external;
+void TranslateMessage(MSG* lpMsg) external;
+void DispatchMessageA(MSG* lpMsg) external;
+void ShowWindow(long hWnd, int nCmdShow) external;
+long GetModuleHandleA(byte* lpModuleName) external;
+long LoadCursorA(long hInstance, byte* lpCursorName) external;
+long GetWindowLongPtrA(long hWnd, int nIndex) external;
+long SetWindowLongPtrA(long hWnd, int nIndex, long dwNewLong) external;
+long BeginPaint(long hWnd, PAINTSTRUCT* ps) external;
+int EndPaint(long hWnd, PAINTSTRUCT* ps) external;
+long GetDC(long hWnd) external;
+int ReleaseDC(long hWnd, long hdc) external;
+int GetClientRect(long hWnd, RECT* lpRect) external;
+int TextOutA(long hdc, int x, int y, byte* lpString, int c) external;
+long CreateFontA(int cHeight, int cWidth, int cEscapement, int cOrientation, int cWeight, int bItalic,
+                             int bUnderline, int bStrikeOut, int iCharSet, int iOutPrecision, int iClipPrecision,
+                             int iQuality, int iPitchAndFamily, byte* pszFaceName) external;
+int GetTextExtentPointA(long hdc, byte* lpString, int c, SIZE* lpSize) external;
+int DeleteObject(long hGdiObj) external;
+long SelectObject(long hdc, long hGdiObj) external;
+long GetStockObject(int i) external;
+long CreatePen(int style, int width, uint color) external;
+long CreateSolidBrush(uint color) external;
+int Rectangle(long hdc, int left, int top, int right, int bottom) external;
+int Ellipse(long hdc, int left, int top, int right, int bottom) external;
+int SetBkMode(long hdc, int mode) external;
+uint SetTextColor(long hdc, uint color) external;
+int GetDeviceCaps(long hdc, int index) external;
+int MoveToEx(long hdc, int x, int y, POINT* lppt) external;
+int LineTo(long hdc, int x, int y) external;
+long CreateCompatibleDC(long hdc) external;
+int DeleteDC(long hdc) external;
+long CreateDIBSection(long hdc, BITMAPINFO* pbmi, uint usage, void** ppvBits, long hSection, uint offset) external;
+int BitBlt(long hdcDest, int x, int y, int cx, int cy, long hdcSrc, int x1, int y1, uint rop) external;
+int StretchBlt(long hdcDest, int xDest, int yDest, int wDest, int hDest, long hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc, uint rop) external;
+long LoadImageA(long hInst, byte* name, uint type, int cx, int cy, uint fuLoad) external;
+int GetObjectA(long h, int c, void* pv) external;
+int AlphaBlend(long hdcDest, int xDest, int yDest, int wDest, int hDest, long hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc, long blendFunc) external;
+int InvalidateRect(long hWnd, RECT* lpRect, int bErase) external;
+void SetCapture(long hWnd) external;
+void ReleaseCapture() external;
+int MessageBoxA(long hWnd, byte *text, byte *title, int style) external;
+int EnableWindow(long hWnd, int bEnable) external;
+int ClientToScreen(long hWnd, POINT* lpPoint) external;
+int ScreenToClient(long hWnd, POINT* lpPoint) external;
+int SetWindowPos(long hWnd, long hWndAfter, int x, int y, int w, int h, uint flags) external;
+
+int MulDiv(int x, int y, int z)
+{
+    return (int)(((long)x * (long)y) / (long)z);
+}
+
+long g_hInstance = 0;
+
+class Font
+{
+    long hFont;
+
+    Font constructor(int size, int weight, bool italic, bool underline, byte* faceName)
+    {
+        base();
+        long gdc = GetDC(0);
+        int height = -MulDiv(size, GetDeviceCaps(gdc, 90/*LOGPIXELSY*/), 72);
+        ReleaseDC(0, gdc);
+        hFont = CreateFontA(height, 0, 0, 0, weight, italic, underline, 0, 0, 0, 0, 0, 0, faceName);
+        return this;
+    }
+
+    void destructor()
+    {
+        DeleteObject(hFont);
+    }
+}
+
+class Pen
+{
+    long hPen;
+
+    Pen constructor(int style, int width, uint color)
+    {
+        base();
+        hPen = CreatePen(style, width, color);
+        return this;
+    }
+
+    void destructor()
+    {
+        DeleteObject(hPen);
+    }
+}
+
+class Brush
+{
+    long hBrush;
+
+    Brush constructor(uint color)
+    {
+        base();
+        hBrush = CreateSolidBrush(color);
+        return this;
+    }
+    
+    void destructor()
+    {
+        DeleteObject(hBrush);
+    }
+}
+
+class Bitmap
+{
+    long hBitmap = 0;
+    int width = 0;
+    int height = 0;
+    int bitsPerPixel = 0;
+    void* pBits = null;
+
+    Bitmap constructor()
+    {
+        base();
+        return this;
+    }
+
+    void destructor()
+    {
+        if(hBitmap != 0)
+        {
+            DeleteObject(hBitmap);
+            hBitmap = 0;
+        }
+    }
+
+    static Bitmap FromSize(int width, int height, int bitsPerPixel)
+    {
+        if(bitsPerPixel != 24 && bitsPerPixel != 32)
+        {
+            Log("Bitmap: Only 24bpp (RGB) and 32bpp (RGBA) formats are supported");
+            return null;
+        }
+
+        Bitmap bitmap = new Bitmap();
+        bitmap.width = width;
+        bitmap.height = height;
+        bitmap.bitsPerPixel = bitsPerPixel;
+
+        BITMAPINFO bmi = {};
+        bmi.bmiHeader.biSize = 40;
+        bmi.bmiHeader.biWidth = width;
+        bmi.bmiHeader.biHeight = -height; // Top-down
+        bmi.bmiHeader.biPlanes = 1;
+        bmi.bmiHeader.biBitCount = (ushort)bitsPerPixel;
+        
+        // For 32bpp, use BI_BITFIELDS
+        if(bitsPerPixel == 32)
+        {
+            bmi.bmiHeader.biCompression = BI_BITFIELDS;
+            bmi.bmiColors[0] = 0x00FF0000; // Red mask
+            bmi.bmiColors[1] = 0x0000FF00; // Green mask
+            bmi.bmiColors[2] = 0x000000FF; // Blue mask
+        }
+        else
+        {
+            bmi.bmiHeader.biCompression = BI_RGB;
+        }
+
+        long hdc = GetDC(0);
+        bitmap.hBitmap = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &bitmap.pBits, 0, 0);
+        ReleaseDC(0, hdc);
+
+        if(bitmap.hBitmap == 0)
+        {
+            Log("Bitmap: Failed to create DIB section");
+            return null;
+        }
+
+        Log("Bitmap created: %dx%d, %dbpp, handle: %lx", width, height, bitsPerPixel, bitmap.hBitmap);
+        return bitmap;
+    }
+
+    static Bitmap FromFile(string filename)
+    {
+        // Open the file
+        file f = file.open(filename, "rb");
+        
+        if(f == null)
+        {
+            Log("Bitmap: Failed to open file: %s", filename);
+            return null;
+        }
+
+        ushort bfType;
+        uint bfSize;
+        ushort bfReserved1;
+        ushort bfReserved2;
+        uint bfOffBits;
+
+        f.read(&bfType, sizeof(bfType));
+        f.read(&bfSize, sizeof(bfSize));
+        f.read(&bfReserved1, sizeof(bfReserved1));
+        f.read(&bfReserved2, sizeof(bfReserved2));
+        f.read(&bfOffBits, sizeof(bfOffBits));
+
+        if(bfType != 0x4D42)
+        {
+            Log("Bitmap: Not a valid BMP file");
+            return null;
+        }
+
+        // Read info header
+        BITMAPINFOHEADER infoHeader = {};
+        //if(ReadFile(hFile, &infoHeader, 40, &bytesRead, null) == 0 || bytesRead != 40)
+        if(f.read(&infoHeader, sizeof(infoHeader)) == 0)
+        {
+            Log("Bitmap: Failed to read info header");
+            return null;
+        }
+
+        // Validate bit depth
+        if(infoHeader.biBitCount != 24 && infoHeader.biBitCount != 32)
+        {
+            Log("Bitmap: Unsupported bit depth: %d", infoHeader.biBitCount);
+            return null;
+        }
+
+        // Create bitmap
+        Bitmap bitmap = new Bitmap();
+        bitmap.width = infoHeader.biWidth;
+        bitmap.height = infoHeader.biHeight > 0 ? infoHeader.biHeight : -infoHeader.biHeight;
+        bitmap.bitsPerPixel = infoHeader.biBitCount;
+
+        BITMAPINFO bmi = {};
+        bmi.bmiHeader = infoHeader;
+        bmi.bmiHeader.biHeight = -bitmap.height; // Top-down DIB
+
+        // For 32bpp, use BI_BITFIELDS with RGBA masks
+        if(bitmap.bitsPerPixel == 32)
+        {
+            bmi.bmiHeader.biCompression = BI_BITFIELDS;
+            bmi.bmiColors[0] = 0x00FF0000; // Red mask
+            bmi.bmiColors[1] = 0x0000FF00; // Green mask
+            bmi.bmiColors[2] = 0x000000FF; // Blue mask
+            // Alpha is implied in the 4th byte
+        }
+        else
+        {
+            bmi.bmiHeader.biCompression = BI_RGB;
+        }
+
+        long hdc = GetDC(0);
+        bitmap.hBitmap = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &bitmap.pBits, 0, 0);
+        ReleaseDC(0, hdc);
+
+        if(bitmap.hBitmap == 0)
+        {
+            Log("Bitmap: Failed to create DIB section for %dbpp", bitmap.bitsPerPixel);
+            return null;
+        }
+
+        // Calculate row size (must be multiple of 4)
+        int rowSize = ((bitmap.width * bitmap.bitsPerPixel + 31) / 32) * 4;
+        int imageSize = rowSize * bitmap.height;
+
+        byte* tempBuffer = (byte*)memory.alloc(imageSize);
+        
+        // Skip to pixel data
+        uint skipBytes = bfOffBits - 54;
+        if(skipBytes > 0)
+        {
+            f.seek(skipBytes, SeekPos.Current);
+        }
+
+        // Read pixel data
+        if(f.read(tempBuffer, imageSize) == 0)
+        {
+            Log("Bitmap: Failed to read pixel data");
+            memory.free(tempBuffer);
+            DeleteObject(bitmap.hBitmap);
+            return null;
+        }
+
+        f.close();
+
+        // Copy and flip if bottom-up BMP
+        byte* dest = (byte*)bitmap.pBits;
+        int destRowSize = bitmap.width * (bitmap.bitsPerPixel / 8);
+        
+        if(infoHeader.biHeight > 0) // Bottom-up
+        {
+            for(int y = 0; y < bitmap.height; y++)
+            {
+                byte* srcRow = tempBuffer + (bitmap.height - 1 - y) * rowSize;
+                byte* destRow = dest + y * destRowSize;
+                for(int x = 0; x < destRowSize; x++)
+                    destRow[x] = srcRow[x];
+            }
+        }
+        else // Top-down
+        {
+            for(int y = 0; y < bitmap.height; y++)
+            {
+                byte* srcRow = tempBuffer + y * rowSize;
+                byte* destRow = dest + y * destRowSize;
+                for(int x = 0; x < destRowSize; x++)
+                    destRow[x] = srcRow[x];
+            }
+        }
+
+        if(bitmap.bitsPerPixel == 32)
+        {
+            // pre-multiply alpha
+            for(int i = 0; i < bitmap.width * bitmap.height; i++)
+            {
+                ubyte* pixel = (ubyte*)dest + i * 4;
+                uint r = pixel[0];
+                uint g = pixel[1];
+                uint b = pixel[2];
+                uint a = pixel[3];
+                if(a != 0)
+                {
+                    pixel[0] = (ubyte)((r * a) / 255U); // R
+                    pixel[1] = (ubyte)((g * a) / 255U); // G
+                    pixel[2] = (ubyte)((b * a) / 255U); // B
+                }
+            }
+        }
+
+        memory.free(tempBuffer);
+
+        return bitmap;
+    }
+
+    void* get PixelData()
+    {
+        return pBits;
+    }
+
+    int get Width()
+    {
+        return width;
+    }
+
+    int get Height()
+    {
+        return height;
+    }
+
+    int get BitsPerPixel()
+    {
+        return bitsPerPixel;
+    }
+}
+
+class Canvas
+{
+    long hdc;
+
+    Canvas constructor(long hdc)
+    {
+        base();
+        this.hdc = hdc;
+        return this;
+    }
+
+    void DrawLine(int x1, int y1, int x2, int y2, Pen pen)
+    {
+        long hPrevPen = SelectObject(hdc, pen.hPen);
+        MoveToEx(hdc, x1, y1, null);
+        LineTo(hdc, x2, y2);
+        SelectObject(hdc, hPrevPen);
+    }
+
+    void DrawRectangle(int left, int top, int width, int height, Pen pen)
+    {
+        long hPrevPen = SelectObject(hdc, pen.hPen);
+        long hPrevBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));
+        Rectangle(hdc, left, top, left+width, top+height);
+        SelectObject(hdc, hPrevBrush);
+        SelectObject(hdc, hPrevPen);
+    }
+
+    void FillRectangle(int left, int top, int width, int height, Brush brush)
+    {
+        long hPrevBrush = SelectObject(hdc, brush.hBrush);
+        long hPrevPen = SelectObject(hdc, GetStockObject(NULL_PEN));
+        Rectangle(hdc, left, top, left+width+1, top+height+1);
+        SelectObject(hdc, hPrevPen);
+        SelectObject(hdc, hPrevBrush);
+    }
+
+    void DrawText(int x, int y, string text, Font font, uint color)
+    {
+        long hPrevFont = SelectObject(hdc, font.hFont);
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, color);
+        TextOutA(hdc, x, y, text.c_str(), text.length);
+        SelectObject(hdc, hPrevFont);
+    }
+
+    SIZE MeasureText(string text, Font font)
+    {
+        long hPrevFont = SelectObject(hdc, font.hFont);
+        SIZE size;
+        GetTextExtentPointA(hdc, text.c_str(), text.length, &size);
+        SelectObject(hdc, hPrevFont);
+        return size;
+    }
+    
+    void DrawBitmap(int x, int y, int width, int height, Bitmap bitmap)
+    {
+        if(bitmap == null || bitmap.hBitmap == 0)
+            return;
+
+        long memDC = CreateCompatibleDC(hdc);
+        long hOldBitmap = SelectObject(memDC, bitmap.hBitmap);
+
+        // Use AlphaBlend for 32bpp bitmaps (with alpha channel)
+        if(bitmap.bitsPerPixel == 32)
+        {
+            BLENDFUNCTION blend = {};
+            blend.BlendOp = AC_SRC_OVER;
+            blend.BlendFlags = 0;
+            blend.SourceConstantAlpha = 255;
+            blend.AlphaFormat = AC_SRC_ALPHA;
+
+            long *blendLong = (long*)&blend; // In Win32 ABI, structs are packed as longs for structs <= 8 bytes
+                                             // and structs > 8 are passed by pointer!
+
+            AlphaBlend(hdc, x, y, width, height, memDC, 0, 0, bitmap.width, bitmap.height, *blendLong);
+        }
+        else // Use BitBlt/StretchBlt for 24bpp (no alpha)
+        {
+            if(width == bitmap.width && height == bitmap.height)
+            {
+                BitBlt(hdc, x, y, width, height, memDC, 0, 0, SRCCOPY);
+            }
+            else
+            {
+                StretchBlt(hdc, x, y, width, height, memDC, 0, 0, bitmap.width, bitmap.height, SRCCOPY);
+            }
+        }
+
+        SelectObject(memDC, hOldBitmap);
+        DeleteDC(memDC);
+    }
+}
+
+class WindowDefaults
+{
+    static Font NormalTextFont = new Font(10, 400, false, false, "Tahoma");
+
+    static uint WindowBackColor = 0x111111;
+    static uint WindowForeColor = 0xffffff;
+    static uint WindowForeColorDisabled = 0x808080;
+
+    static uint ButtonBackColor = 0xd77800;
+    static uint ButtonBackColorActive = 0x9e5a00;
+    static uint ButtonBackColorDisabled = 0x808080;
+
+    static Bitmap CheckboxChecked = Bitmap.FromFile("Checkbox_Checked.bmp");
+    static Bitmap CheckboxUnchecked = Bitmap.FromFile("Checkbox_Unchecked.bmp");
+    static Bitmap CheckboxDim = Bitmap.FromFile("Checkbox_Dim.bmp");
+
+    static Bitmap RadiobuttonChecked = Bitmap.FromFile("Radiobutton_Checked.bmp");
+    static Bitmap RadiobuttonUnchecked = Bitmap.FromFile("Radiobutton_Unchecked.bmp");
+    static Bitmap RadiobuttonDim = Bitmap.FromFile("Radiobutton_Dim.bmp");
+
+    static Bitmap ScrollLeft = Bitmap.FromFile("Scroll_Left.bmp");
+    static Bitmap ScrollRight = Bitmap.FromFile("Scroll_Right.bmp");
+    static Bitmap ScrollUp = Bitmap.FromFile("Scroll_Up.bmp");
+    static Bitmap ScrollDown = Bitmap.FromFile("Scroll_Down.bmp");
+
+    static Bitmap DropdownArrow = Bitmap.FromFile("Dropdown_Arrow.bmp");
+}
+
+class MessageBox
+{
+    static int Show(string text, string caption, int style)
+    {
+        return MessageBoxA(0, text.c_str(), caption.c_str(), style);
+    }
+}
+
+class Window
+{
+    long hWnd = 0;
+    weak Window parent = null;
+    array<Window> children = new array<Window>();
+    string className;
+    string text = "Window";
+    RECT clientRect;
+    uint backColor = WindowDefaults.WindowBackColor;
+    uint foreColor = WindowDefaults.WindowForeColor;
+    Brush backBrush;
+    int x = CW_USEDEFAULT;
+    int y = CW_USEDEFAULT;
+    int width = CW_USEDEFAULT;
+    int height = CW_USEDEFAULT;
+    Font Font = WindowDefaults.NormalTextFont;
+    bool visible = false;
+    bool enabled = true;
+    static Window hoverWindow = null;
+
+    Window constructor()
+    {
+        base();
+        backBrush = new Brush(backColor);
+        return this;
+    }
+
+    void destructor()
+    {
+        Log("Destroying %s window %p", getClassName(), this);
+        base();
+    }
+
+    virtual uint GetClassStyle()
+    {
+        return CS_HREDRAW | CS_VREDRAW;
+    }
+
+    virtual uint GetWindowStyle()
+    {
+        return WS_OVERLAPPEDWINDOW;
+    }
+
+    void RegisterClass()
+    {
+        className = getClassName();
+
+        WNDCLASSA wc = {};
+        wc.style         = GetClassStyle();
+        wc.lpfnWndProc   = Window._WindowProc;
+        wc.hInstance     = g_hInstance;
+        wc.hCursor       = LoadCursorA(0, (byte*)IDC_ARROW);
+        wc.hbrBackground = 0;
+        wc.lpszClassName = className.c_str();
+        wc.cbWndExtra    = 8; // Reserve space for a pointer
+        RegisterClassA(&wc);
+    }
+
+    void CreateHandle()
+    {
+        RegisterClass();
+
+        hWnd = CreateWindowExA(
+            0,                  
+            className.c_str(),
+            text.c_str(),       
+            GetWindowStyle(),
+            x, y, width, height,
+            parent != null ? parent.GetHandle() : 0,                  
+            0,                  
+            g_hInstance,        
+            this
+        );
+    }
+
+    long GetHandle()
+    {
+        if(hWnd == 0)
+            CreateHandle();
+        return hWnd;
+    }
+
+    RECT get ClientRect()
+    {
+        GetClientRect(hWnd, &clientRect);
+        return clientRect;
+    }
+
+    uint get ForeColor() => foreColor;
+    void set ForeColor(uint value)
+    {
+        foreColor = value;
+        Invalidate();
+    }
+
+    uint get BackColor() => backColor;
+    void set BackColor(uint value)
+    {
+        backColor = value;
+        backBrush = new Brush(backColor);
+        Invalidate();
+    }
+
+    string get Text() => text;
+    void set Text(string value)
+    {
+        text = value;
+        Invalidate();
+    }
+
+    bool get Enabled() => enabled;
+    void set Enabled(bool value)
+    {
+        enabled = value;
+        if(value)
+        {
+            EnableWindow(hWnd, 1);
+            OnEnabled();
+        }
+        else
+        {
+            OnDisabled();
+            EnableWindow(hWnd, 0);
+        }
+    }
+
+    bool get Visible() => visible;
+    void set Visible(bool value)
+    {
+        visible = value;
+        if(visible)
+            ShowWindow(hWnd, SW_SHOW);
+        else
+            ShowWindow(hWnd, SW_HIDE);
+    }
+
+    void SetPosition(int x, int y)
+    {
+        SetWindowPos(GetHandle(), 0, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+        this.x = x;
+        this.y = y;
+    }
+
+    void Show(int nCmdShow)
+    {
+        ShowWindow(GetHandle(), nCmdShow);
+        visible = true;
+    }
+
+    void Invalidate()
+    {
+        InvalidateRect(hWnd, null, 1);
+    }
+
+    virtual void OnCreate() {}
+    virtual void OnDestroy() {}
+
+    virtual void OnPaintBackground(Canvas canvas) 
+    {
+        RECT r = ClientRect;
+        canvas.FillRectangle(0, 0, r.right, r.bottom, backBrush);
+    }
+    virtual void OnPaint(Canvas canvas) {}
+
+    virtual void OnMouseMove(int x, int y) {}
+    virtual void OnMouseDown(int button, int x, int y) {}
+    virtual void OnMouseUp(int button, int x, int y) {}
+    virtual void OnMouseWheel(int delta, int x, int y) {}
+    virtual void OnMouseEnter() {}
+    virtual void OnMouseLeave() {}
+
+    virtual void OnEnabled() {}
+    virtual void OnDisabled() {}
+
+    virtual long WndProc(long hwnd, uint uMsg, ulong wParam, ulong lParam)
+    {
+        if(uMsg == WM_CREATE)
+        {
+            OnCreate();
+        }
+        else if(uMsg == WM_DESTROY)
+        {
+            OnDestroy();
+            if(Window.hoverWindow == this)
+                Window.hoverWindow = null;
+            hWnd = 0;
+        }
+        else if(uMsg == WM_ERASEBKG)
+        {
+            Canvas canvas = new Canvas(wParam);
+            OnPaintBackground(canvas);
+            return 1; // Prevent flickering by not erasing background
+        }
+        else if(uMsg == WM_PAINT)
+        {
+            PAINTSTRUCT ps = {};
+            long hdc = BeginPaint(hwnd, &ps);
+            Canvas canvas = new Canvas(hdc);
+            OnPaint(canvas);
+            EndPaint(hwnd, &ps);
+            return 0;
+        }
+        else if(uMsg == WM_MOUSEMOVE)
+        {
+            if(Window.hoverWindow != this)
+            {
+                if(Window.hoverWindow != null)
+                {
+                    Window.hoverWindow.OnMouseLeave();
+                }
+                Window.hoverWindow = this;
+                OnMouseEnter();
+            }
+
+            int x = (int)(short)(lParam & 0xFFFF);
+            int y = (int)(short)((lParam >> 16) & 0xFFFF);
+            OnMouseMove(x, y);
+        }
+        else if(uMsg == WM_LBUTTONDOWN)
+        {
+            int x = (int)(short)(lParam & 0xFFFF);
+            int y = (int)(short)((lParam >> 16) & 0xFFFF);
+            OnMouseDown(1, x, y);
+        }
+        else if(uMsg == WM_LBUTTONUP)
+        {
+            int x = (int)(short)(lParam & 0xFFFF);
+            int y = (int)(short)((lParam >> 16) & 0xFFFF);
+            OnMouseUp(1, x, y);
+        }
+        else if(uMsg == WM_RBUTTONDOWN)
+        {
+            int x = (int)(short)(lParam & 0xFFFF);
+            int y = (int)(short)((lParam >> 16) & 0xFFFF);
+            OnMouseDown(2, x, y);
+        }
+        else if(uMsg == WM_RBUTTONUP)
+        {
+            int x = (int)(short)(lParam & 0xFFFF);
+            int y = (int)(short)((lParam >> 16) & 0xFFFF);
+            OnMouseUp(2, x, y);
+        }
+        else if(uMsg == WM_MOUSEWHEEL)
+        {
+            int delta = (int)(short)((wParam >> 16) & 0xFFFF);
+            int x = (int)(short)(lParam & 0xFFFF);
+            int y = (int)(short)((lParam >> 16) & 0xFFFF);
+            if(delta > 0)
+                OnMouseWheel(1, x, y);
+            else if(delta < 0)
+                OnMouseWheel(-1, x, y);
+        }
+        return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+    }
+
+    static long _WindowProc(long hwnd, uint uMsg, ulong wParam, ulong lParam)
+    {
+        Window *window = null;
+
+        if(uMsg == WM_NCCREATE)
+        {
+            void* createParams = ((CREATESTRUCTA*)lParam).lpCreateParams;
+            SetWindowLongPtrA(hwnd, 0, createParams);
+            window = (Window*)createParams;
+            window.hWnd = hwnd;
+        }
+        else
+        {
+            long ptr = GetWindowLongPtrA(hwnd, 0);
+            window = (Window*)ptr;
+        }
+
+        if(window != null)
+        {
+            return window.WndProc(hwnd, uMsg, wParam, lParam);
+        }
+
+        return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+    }
+}
+
+class Control : Window
+{
+    uint GetWindowStyle()
+    {
+        return WS_CHILD | WS_VISIBLE;
+    }
+
+    Control constructor(Window parent, int x, int y, int width, int height)
+    {
+        base();
+        this.parent = parent;
+        if(parent)
+            parent.children.add(this);
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.visible = true;
+        return this;
+    }
+}
+
+class Label : Control
+{
+    Label constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        return this;
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        canvas.DrawText(0, 0, Text, this.Font, ForeColor);
+    }
+}
+
+class Delegate
+{
+	weak object target;
+	void (*method)(object, object, void*);
+
+	Delegate constructor(object target, void* method)
+	{
+		base();
+		this.target = target;
+		this.method = method;
+		return this;
+	}
+
+	void call(object sender, void *args)
+	{
+		method(target, sender, args);
+	}
+}
+
+class Event
+{
+	array<Delegate> handlers = new array<Delegate>();
+
+	void add(Delegate d)
+	{
+		handlers.add(d);
+	}
+	
+	void invoke(object sender, void *args)
+	{
+		for(int i = 0; i < handlers.count; ++i)
+		{
+			handlers[i].call(sender, args);
+		}
+	}
+}
+
+Event operator+(Event e,  Delegate d)
+{
+	e.add(d);
+	return e;
+}
+
+class Button : Control
+{
+    Event Clicked = new Event();
+
+    Button constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        BackColor = WindowDefaults.ButtonBackColor;
+        return this;
+    }
+
+    void OnEnabled()
+    {
+        BackColor = WindowDefaults.ButtonBackColor;
+    }
+
+    void OnDisabled()
+    {
+        BackColor = WindowDefaults.ButtonBackColorDisabled;
+    }
+
+    void OnMouseEnter()
+    {
+        BackColor = WindowDefaults.ButtonBackColorActive;
+    }
+
+    void OnMouseLeave()
+    {
+        BackColor = WindowDefaults.ButtonBackColor;
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        SIZE ts = canvas.MeasureText(Text, this.Font);
+        int x = (width - ts.cx) / 2;
+        int y = (height - ts.cy) / 2;
+        canvas.DrawText(x, y, Text, this.Font, ForeColor);
+    }
+
+    void OnMouseDown(int button, int x, int y)
+    {
+        if(button == 1)
+            SetCapture(hWnd);
+    }
+
+    void OnMouseUp(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            ReleaseCapture();
+            RECT r = ClientRect;
+            if(x>= 0 && x < r.right && y >= 0 && y < r.bottom)
+            {
+                Clicked.invoke(this, null);
+            }
+        }
+    }
+}
+
+class Checkbox : Control
+{
+    Event Clicked = new Event();
+    bool checked = false;
+
+    bool get Checked() => checked;
+    void set Checked(bool value)
+    {
+        checked = value;
+        Invalidate();
+    }
+
+    Checkbox constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        return this;
+    }
+
+    void OnEnabled()
+    {
+        ForeColor = WindowDefaults.WindowForeColor;
+    }
+
+    void OnDisabled()
+    {
+        ForeColor = WindowDefaults.WindowForeColorDisabled;
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        canvas.DrawBitmap(0, 0, 16, 16, Checked ? WindowDefaults.CheckboxChecked : WindowDefaults.CheckboxUnchecked);
+        if(!Enabled)
+            canvas.DrawBitmap(0, 0, 16, 16, WindowDefaults.CheckboxDim);
+        canvas.DrawText(20, 0, Text, this.Font, ForeColor);
+    }
+
+    void OnMouseDown(int button, int x, int y)
+    {
+        if(button == 1)
+            SetCapture(hWnd);
+    }
+
+    void OnMouseUp(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            ReleaseCapture();
+            RECT r = ClientRect;
+            if(x>= 0 && x < r.right && y >= 0 && y < r.bottom)
+            {
+                Checked = !Checked;
+                Clicked.invoke(this, null);
+            }
+        }
+    }
+}
+
+class Radiobutton : Control
+{
+    Event Clicked = new Event();
+    bool checked = false;
+    int Group = 0;
+
+    bool get Checked() => checked;
+    void set Checked(bool value)
+    {
+        checked = value;
+        Invalidate();
+    }
+
+    Radiobutton constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        return this;
+    }
+
+    void OnEnabled()
+    {
+        ForeColor = WindowDefaults.WindowForeColor;
+    }
+
+    void OnDisabled()
+    {
+        ForeColor = WindowDefaults.WindowForeColorDisabled;
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        canvas.DrawBitmap(0, 0, 16, 16, Checked ? WindowDefaults.RadiobuttonChecked : WindowDefaults.RadiobuttonUnchecked);
+        if(!Enabled)
+            canvas.DrawBitmap(0, 0, 16, 16, WindowDefaults.RadiobuttonDim);
+        canvas.DrawText(20, 0, Text, this.Font, ForeColor);
+    }
+
+    void OnMouseDown(int button, int x, int y)
+    {
+        if(button == 1)
+            SetCapture(hWnd);
+    }
+
+    private void UncheckOthers()
+    {
+        for(int i = 0; i < parent.children.count; ++i)
+        {
+            Radiobutton other = parent.children[i] as Radiobutton;
+            if(other != null && other.Group == Group)
+            {
+                other.Checked = false;
+            }
+        }
+    }
+
+    void OnMouseUp(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            ReleaseCapture();
+            RECT r = ClientRect;
+            if(x>= 0 && x < r.right && y >= 0 && y < r.bottom)
+            {
+                UncheckOthers();
+                Checked = true;
+                Clicked.invoke(this, null);
+            }
+        }
+    }
+}
+
+class Scrollbar : Control
+{
+    int MaxValue = 100;
+    int PageSize = 10;
+    int position = 0;
+    bool scrolling = false;
+    bool arrowsVisible = false;
+
+    Event Scrolled = new Event();
+
+    int get Position() => position;
+    void set Position(int value)
+    {
+        position = value;
+        if(position < 0) position = 0;
+        else if(position > MaxValue) position = MaxValue;
+        Invalidate();
+    }
+
+    Scrollbar constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        return this;
+    }
+
+    void OnPaintBackground(Canvas canvas)
+    {
+    }
+
+    void OnMouseEnter()
+    {
+        arrowsVisible = true;
+        Invalidate();
+    }
+
+    void OnMouseLeave()
+    {
+        arrowsVisible = false;
+        Invalidate();
+    }
+}
+
+class VScrollbar : Scrollbar
+{
+    VScrollbar constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        return this;
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        if(arrowsVisible)
+        {
+            canvas.DrawBitmap(0, 0, 16, 16, WindowDefaults.ScrollUp);
+            canvas.DrawBitmap(0, height-16, 16, 16, WindowDefaults.ScrollDown);
+        }
+        else
+        {
+            canvas.FillRectangle(0, 0, width, 16, backBrush);
+            canvas.FillRectangle(0, height-16, width, 16, backBrush);
+        }
+        // Draw scrollbar background
+        canvas.FillRectangle(0, 16, width, height - 32 + 1, new Brush(0x333333));
+        
+        // Calculate thumb size and position
+        int trackHeight = height - 32;
+        int contentSize = MaxValue + PageSize; // Total scrollable content
+
+        if(contentSize > 0)
+        {        
+            // Thumb represents PageSize / ContentSize ratio
+            int thumbHeight = (PageSize * trackHeight) / contentSize;
+        
+            // Minimum thumb size for usability
+            if(thumbHeight < 16)
+                thumbHeight = 16;
+        
+            // Maximum thumb height (can't be larger than track)
+            if(thumbHeight > trackHeight)
+                thumbHeight = trackHeight;
+        
+            // Calculate thumb position within available space
+            int availableSpace = trackHeight - thumbHeight;
+            int thumbY = 16;
+        
+            if(MaxValue > 0 && availableSpace > 0)
+                thumbY = 16 + (position * availableSpace) / MaxValue;
+        
+            // Draw thumb
+            canvas.FillRectangle(0, thumbY, width, thumbHeight, new Brush(0x777777));
+        }
+    }
+
+    void OnMouseDown(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            int trackHeight = height - 32;
+            int contentSize = MaxValue + PageSize;
+            int thumbHeight = (PageSize * trackHeight) / contentSize;
+            if(thumbHeight < 20) thumbHeight = 20;
+            if(thumbHeight > trackHeight) thumbHeight = trackHeight;
+            
+            int availableSpace = trackHeight - thumbHeight;
+            int thumbY = 16;
+            if(MaxValue > 0 && availableSpace > 0)
+                thumbY = 16 + (position * availableSpace) / MaxValue;
+            
+            if(y < 16)
+            {
+                if(position > 0)
+                {
+                    position--;
+                    Invalidate();
+                    Scrolled.invoke(this, null);
+                }
+            }
+            else if(y < thumbY)
+            {
+                if(position > 0)
+                {
+                    position -= PageSize;
+                    if(position < 0) position = 0;
+                    Invalidate();
+                    Scrolled.invoke(this, null);
+                }
+            }
+            else if(y < thumbY + thumbHeight)
+            {
+                // Clicked on thumb, do nothing (could implement dragging here)
+                scrolling = true;
+                SetCapture(hWnd);
+            }
+            else if(y < height-16)
+            {
+                if(position < MaxValue)
+                {
+                    position += PageSize;
+                    if(position > MaxValue) position = MaxValue;
+                    Invalidate();
+                    Scrolled.invoke(this, null);
+                }
+            }
+            else
+            {
+                if(position < MaxValue)
+                {
+                    position++;
+                    Invalidate();
+                    Scrolled.invoke(this, null);
+                }
+            }
+        }
+    }
+
+    void OnMouseUp(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            scrolling = false;
+            ReleaseCapture();
+        }
+    }
+
+    void OnMouseMove(int x, int y)
+    {
+        if(scrolling)
+        {
+            int trackHeight = height - 32;
+            int contentSize = MaxValue + PageSize;
+            int thumbHeight = (PageSize * trackHeight) / contentSize;
+            if(thumbHeight < 16) thumbHeight = 16;
+            if(thumbHeight > trackHeight) thumbHeight = trackHeight;
+            
+            int availableSpace = trackHeight - thumbHeight;
+            
+            if(availableSpace > 0)
+            {
+                position = ((y - 16) * MaxValue) / availableSpace;
+                if(position < 0) position = 0;
+                else if(position > MaxValue) position = MaxValue;
+                Invalidate();
+                Scrolled.invoke(this, null);
+            }
+        }
+    }
+}
+
+class HScrollbar : Scrollbar
+{
+    HScrollbar constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        return this;
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        if(arrowsVisible)
+        {
+            canvas.DrawBitmap(0, 0, 16, 16, WindowDefaults.ScrollLeft);
+            canvas.DrawBitmap(width-16, 0, 16, 16, WindowDefaults.ScrollRight);
+        }
+        else
+        {
+            canvas.FillRectangle(0, 0, width, 16, backBrush);
+            canvas.FillRectangle(width-16, 0, width, 16, backBrush);
+        }
+        // Draw scrollbar background
+        canvas.FillRectangle(16, 0, width - 32 + 1, height, new Brush(0x333333));
+        
+        // Calculate thumb size and position
+        int trackWidth = width - 32;
+        int contentSize = MaxValue + PageSize; // Total scrollable content
+
+        if(contentSize > 0)
+        {        
+            // Thumb represents PageSize / ContentSize ratio
+            int thumbWidth = (PageSize * trackWidth) / contentSize;
+        
+            // Minimum thumb size for usability
+            if(thumbWidth < 16)
+                thumbWidth = 16;
+        
+            // Maximum thumb height (can't be larger than track)
+            if(thumbWidth > trackWidth)
+                thumbWidth = trackWidth;
+        
+            // Calculate thumb position within available space
+            int availableSpace = trackWidth - thumbWidth;
+            int thumbX = 16;
+        
+            if(MaxValue > 0 && availableSpace > 0)
+                thumbX = 16 + (position * availableSpace) / MaxValue;
+        
+            // Draw thumb
+            canvas.FillRectangle(thumbX, 0, thumbWidth, height, new Brush(0x777777));
+        }
+    }
+
+    void OnMouseDown(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            int trackWidth = width - 32;
+            int contentSize = MaxValue + PageSize;
+            int thumbWidth = (PageSize * trackWidth) / contentSize;
+            if(thumbWidth < 16) thumbWidth = 16;
+            if(thumbWidth > trackWidth) thumbWidth = trackWidth;
+            
+            int availableSpace = trackWidth - thumbWidth;
+            int thumbX = 16;
+            if(MaxValue > 0 && availableSpace > 0)
+                thumbX = 16 + (position * availableSpace) / MaxValue;
+            
+            if(x < 16)
+            {
+                if(position > 0)
+                {
+                    position--;
+                    Invalidate();
+                    Scrolled.invoke(this, null);
+                }
+            }
+            else if(x < thumbX)
+            {
+                if(position > 0)
+                {
+                    position -= PageSize;
+                    if(position < 0) position = 0;
+                    Invalidate();
+                    Scrolled.invoke(this, null);
+                }
+            }
+            else if(x < thumbX + thumbWidth)
+            {
+                // Clicked on thumb, do nothing (could implement dragging here)
+                scrolling = true;
+                SetCapture(hWnd);
+            }
+            else if(x < width-16)
+            {
+                if(position < MaxValue)
+                {
+                    position += PageSize;
+                    if(position > MaxValue) position = MaxValue;
+                    Invalidate();
+                    Scrolled.invoke(this, null);
+                }
+            }
+            else
+            {
+                if(position < MaxValue)
+                {
+                    position++;
+                    Invalidate();
+                    Scrolled.invoke(this, null);
+                }
+            }
+        }
+    }
+
+    void OnMouseUp(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            scrolling = false;
+            ReleaseCapture();
+        }
+    }
+
+    void OnMouseMove(int x, int y)
+    {
+        if(scrolling)
+        {
+            int trackWidth = width - 32;
+            int contentSize = MaxValue + PageSize;
+            int thumbWidth = (PageSize * trackWidth) / contentSize;
+            if(thumbWidth < 16) thumbWidth = 16;
+            if(thumbWidth > trackWidth) thumbWidth = trackWidth;
+            
+            int availableSpace = trackWidth - thumbWidth;
+            
+            if(availableSpace > 0)
+            {
+                position = ((x - 16) * MaxValue) / availableSpace;
+                if(position < 0) position = 0;
+                else if(position > MaxValue) position = MaxValue;
+                Invalidate();
+                Scrolled.invoke(this, null);
+            }
+        }
+    }
+}
+
+class ListItems : Control
+{
+    array<object> items = new array<object>();
+    int topIndex = 0;
+
+    ListItems constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);        
+        GetHandle();
+        BackColor = 0x333333;
+        return this;
+    }
+
+    void Add(object item)
+    {
+        items.add(item);
+        Invalidate();
+        Listbox listbox = (Listbox)parent;
+        listbox.vscroll.MaxValue = (items.count - (listbox.height / 20)) >? 0;        
+        int itemHeight = 20;
+        int numVisible = height / itemHeight;
+        listbox.vscroll.PageSize = numVisible;
+        listbox.vscroll.Invalidate();
+    }
+
+    void Remove(object item)
+    {
+        if(items.contains(item))
+        {
+            items.remove(item);
+            Listbox listbox = (Listbox)parent;
+            listbox.vscroll.MaxValue = (items.count - (listbox.height / 20)) >? 0;
+            int itemHeight = 20;
+            if(listbox.selectedIndex >= items.count)
+            {
+                listbox.selectedIndex = items.count - 1;                
+            }
+            if(listbox.selectedIndex < topIndex)
+                topIndex = listbox.selectedIndex >? 0;
+            listbox.vscroll.Position = topIndex;
+            topIndex = listbox.vscroll.Position;
+            Invalidate();
+            listbox.vscroll.Invalidate();
+            listbox.SelectedIndexChanged.invoke(listbox, null);
+        }
+    }
+
+    object get_item(int index) => items[index];
+
+    void set_item(int index, object value)
+    {
+        if(index >= 0 && index < items.count)
+        {
+            items[index] = value;
+            Invalidate();
+        }
+    }
+
+    int get Count() => items.count;
+
+    void OnPaint(Canvas canvas)
+    {
+        int itemHeight = 20;
+        int numVisible = height / itemHeight;
+        Listbox listbox = (Listbox)parent;
+        for(int i = 0; i < numVisible; ++i)
+        {
+            int itemIndex = topIndex + i;
+            if(itemIndex >= items.count)
+                break;
+            if(itemIndex == listbox.selectedIndex)
+            {
+                canvas.FillRectangle(0, i * itemHeight, width, itemHeight, new Brush(0xaa5555));
+            }
+            string text = items[itemIndex].toString();
+            canvas.DrawText(2, i * itemHeight + 1, text, this.Font, listbox.Enabled ? ForeColor : WindowDefaults.WindowForeColorDisabled);
+        }
+    }
+
+    void OnMouseDown(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            int itemHeight = 20;
+            int itemIndex = topIndex + y / itemHeight;
+            if(itemIndex >= 0 && itemIndex < items.count)
+            {
+                Listbox listbox = (Listbox)parent;
+                if(itemIndex != listbox.selectedIndex)
+                {
+                    listbox.selectedIndex = itemIndex;
+                    Invalidate();
+                    listbox.SelectedIndexChanged.invoke(listbox, null);
+                }
+                listbox.Clicked.invoke(listbox, null);
+            }
+        }
+    }
+
+    void OnMouseWheel(int delta, int x, int y)
+    {
+        Listbox listbox = (Listbox)parent;
+        if(delta > 0)
+        {
+            if(listbox.vscroll.Position > 0)
+            {
+                listbox.vscroll.Position -= 1;
+                topIndex = listbox.vscroll.Position;
+                Invalidate();
+            }
+        }
+        else if(delta < 0)
+        {
+            if(listbox.vscroll.Position < listbox.vscroll.MaxValue)
+            {
+                listbox.vscroll.Position += 1;
+                topIndex = listbox.vscroll.Position;
+                Invalidate();
+            }
+        }
+    }
+}
+
+class Listbox : Control
+{
+    VScrollbar vscroll;
+    ListItems Items;
+    int selectedIndex = -1;
+    Event SelectedIndexChanged = new Event();
+    Event Clicked = new Event();
+
+    int get SelectedIndex() => selectedIndex;
+    void set SelectedIndex(int value)
+    {
+        if(value >= -1 && value < Items.Count)
+        {
+            selectedIndex = value;
+            if(selectedIndex > -1)
+            {
+                int itemHeight = 20;
+                int numVisible = height / itemHeight;
+                if(selectedIndex < Items.topIndex)
+                    Items.topIndex = selectedIndex;
+                else if(selectedIndex > Items.topIndex + numVisible - 1)
+                    Items.topIndex = selectedIndex - numVisible + 1;
+                vscroll.Position = Items.topIndex;               
+            } 
+            Items.Invalidate();
+        }
+    }
+
+    object get SelectedItem()
+    {
+        if(selectedIndex >= 0 && selectedIndex < Items.Count)
+            return Items.items[selectedIndex];
+        return null;
+    }
+
+    Listbox constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        vscroll = new VScrollbar(this, width - 16, 0, 16, height);
+        vscroll.Scrolled += new Delegate(this, Listbox.VScroll_Scrolled);
+        Items = new ListItems(this, 0, 0, width - 16, height);
+        return this;
+    }
+
+    void OnEnabled()
+    {
+        Items.Invalidate();
+    }
+
+    void OnDisabled()
+    {
+        Items.Invalidate();
+    }
+
+    void VScroll_Scrolled(object sender, void* args)
+    {
+        Items.topIndex = vscroll.Position;
+        Items.Invalidate();
+    }
+}
+
+class PopupWindow : Window
+{
+    PopupWindow constructor(Window parent, int x, int y, int width, int height)
+    {
+        base();
+        this.parent = parent;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        CreateHandle();
+        return this;
+    }
+
+    uint GetWindowStyle()
+    {
+        return WS_POPUP;
+    }
+}
+
+class Dropdown : Control
+{
+    PopupWindow popup = null;
+    Listbox listbox = null;
+    ListItems Items = null;
+    Event Clicked = new Event();
+
+    Dropdown constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);        
+        GetHandle();
+        BackColor = 0x333333;
+
+        popup = new PopupWindow(parent, 0, 0, width, 160);
+        listbox = new Listbox(popup, 0, 0, width, 160);
+        Items = listbox.Items;
+        listbox.Clicked += new Delegate(this, Dropdown.Listbox_Clicked);
+        return this;
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        canvas.FillRectangle(0, 0, width, height, backBrush);
+        canvas.DrawBitmap(width - 16, (height - 16) / 2, 16, 16, WindowDefaults.DropdownArrow);
+        canvas.DrawText(2, 1, Text, this.Font, ForeColor);
+    }
+
+    void OnMouseDown(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            if(!popup.Visible)
+            {
+                POINT pt = {this.x, this.y + height};
+                ClientToScreen(parent.hWnd, &pt);
+                popup.SetPosition(pt.x, pt.y);
+                popup.Visible = true;
+            }
+            else
+            {
+                popup.Visible = false;
+            }
+        }
+    }
+
+    void Listbox_Clicked(object sender, void *param)
+    {
+        if(listbox.SelectedIndex >= 0)
+        {
+            Text = listbox.SelectedItem.toString();
+            popup.Visible = false;
+            Clicked.invoke(this, null);
+        }
+        popup.Visible = false;
+    }
+}
+
+class Panel : Control
+{
+    bool border = true;
+    Pen forePen;
+    
+    Panel constructor(Window parent, int x, int y, int w, int h)
+    {
+        base(parent, x, y, w, h);        
+        GetHandle();
+        forePen = new Pen(PS_SOLID, 1, ForeColor);
+        return this;
+    }
+
+    bool get Border() => border;
+    void set Border(bool value)
+    {
+        border = value;
+        Invalidate();
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        if(border)
+        {
+            canvas.DrawRectangle(0, 0, width, height, forePen);
+        }
+    }
+}
+
+class Picturebox : Panel
+{
+    Bitmap bitmap;
+
+    Picturebox constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        return this;
+    }
+
+    Bitmap get Image() => bitmap;
+    void set Image(Bitmap value)
+    {
+        bitmap = value;
+        Invalidate();
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        if(bitmap != null)
+        {
+            int b = border ? 1 : 0;
+            canvas.DrawBitmap(b, b, width - 2 * b, height - 2 * b, bitmap);
+        }
+        base(canvas);
+    }
+}
+
+class MyWindow : Window
+{
+    Brush bkgBrush = new Brush(0xffffee);
+    Font font = new Font(10, 400, false, false, "Tahoma");
+    Pen pen = new Pen(PS_SOLID, 1, 0x0000ff);
+    Brush brush = new Brush(0xff0000);
+    //Bitmap testBitmap = null;
+    Bitmap testBitmap2 = null;
+    Label label1 = null;
+    Button button1 = null;
+    Button button2 = null;
+    Button button3 = null;
+    Checkbox checkbox1 = null;
+    Checkbox checkbox2 = null;
+    Radiobutton radio1 = null;
+    Radiobutton radio2 = null;
+    VScrollbar vscroll = null;
+    HScrollbar hscroll = null;
+    Listbox listbox = null;
+    Button button4 = null;
+    Button button5 = null;
+    Button button6 = null;
+    Button button7 = null;
+    Dropdown dropdown = null;
+    Panel panel = null;
+    Picturebox picturebox = null;
+
+    void OnCreate()
+    {
+        // Create a test bitmap (100x100 32bpp RGBA)
+        /*testBitmap = Bitmap.FromSize(100, 100, 32);
+
+        // Fill it with a gradient (example)
+        if(testBitmap != null)
+        {
+            uint* pixels = (uint*)testBitmap.PixelData;
+            if(pixels != null)
+            {
+                for(int y = 0; y < 100; y++)
+                {
+                    for(int x = 0; x < 100; x++)
+                    {
+                        uint r = (x * 255 / 100);
+                        uint g = (y * 255 / 100);
+                        uint b = 128;
+                        uint a = 0xff;
+                        pixels[y * 100 + x] = (a << 24) | (r << 16) | (g << 8) | b;
+                    }
+                }
+            }
+        }*/
+
+        testBitmap2 = Bitmap.FromFile("sparkUI32.bmp");
+
+        label1 = new Label(this, 10, 10, 200, 30);
+        label1.Text = "Label1";
+
+        button1 = new Button(this, 10, 50, 100, 30);
+        button1.Text = "Button1";
+        button1.Clicked += new Delegate(this, MyWindow.Button1_Clicked);
+
+        button2 = new Button(this, 10, 90, 100, 30);
+        button2.Text = "Button2";
+        button2.Clicked += new Delegate(this, MyWindow.Button2_Clicked);
+
+        button3 = new Button(this, 120, 90, 100, 30);
+        button3.Text = "Button3";
+        button3.Clicked += new Delegate(this, MyWindow.Button3_Clicked);
+
+        checkbox1 = new Checkbox(this, 10, 130, 100, 20);
+        checkbox1.Text = "Checkbox1";
+
+        checkbox2 = new Checkbox(this, 10, 150, 100, 20);
+        checkbox2.Text = "Checkbox2";
+
+        radio1 = new Radiobutton(this, 10, 170, 100, 20);
+        radio1.Text = "Radiobutton1";
+
+        radio2 = new Radiobutton(this, 10, 190, 100, 20);
+        radio2.Text = "Radiobutton2";
+
+        vscroll = new VScrollbar(this, 10, 210, 16, 150); 
+        vscroll.Scrolled += new Delegate(this, MyWindow.VScroll_Scrolled);
+
+        hscroll = new HScrollbar(this, 30, 210, 150, 16);
+        hscroll.Scrolled += new Delegate(this, MyWindow.HScroll_Scrolled);
+
+        listbox = new Listbox(this, 200, 210, 200, 200);
+
+        for(int i = 0; i < 50; ++i)
+        {
+            listbox.Items.Add(string.format("Item %d", i));
+        }
+
+        listbox.SelectedIndexChanged += new Delegate(this, MyWindow.Listbox_SelectedIndexChanged);
+
+        button4 = new Button(this, 410, 210, 20, 20);
+        button4.Text = "-";
+        button4.Clicked += new Delegate(this, MyWindow.Button4_Clicked);
+
+        button5 = new Button(this, 410, 230, 20, 20);
+        button5.Text = "+";
+        button5.Clicked += new Delegate(this, MyWindow.Button5_Clicked);
+
+        button6 = new Button(this, 410, 260, 20, 20);
+        button6.Text = "(-)";
+        button6.Clicked += new Delegate(this, MyWindow.Button6_Clicked);
+
+        button7 = new Button(this, 410, 280, 20, 20);
+        button7.Text = "(+)";
+        button7.Clicked += new Delegate(this, MyWindow.Button7_Clicked);
+
+        dropdown = new Dropdown(this, 200, 170, 200, 20);
+        dropdown.Text = "Dropdown";
+
+        for(int i = 0; i < 30; ++i)
+        {
+            dropdown.Items.Add(string.format("Dropdown Item %d", i));
+        }
+
+        panel = new Panel(this, 440, 210, 200, 200);
+
+        picturebox = new Picturebox(this, 440, 10, 240, 180);
+        picturebox.Image = testBitmap2;
+
+    }
+
+    void Button1_Clicked(object sender, void* args)
+    {
+        MessageBox.Show("Button1 Clicked!", "Info", 0);
+    }
+
+    void Button2_Clicked(object sender, void* args)
+    {
+        button1.Enabled = !button1.Enabled;
+        checkbox1.Enabled = !checkbox1.Enabled;
+        radio1.Enabled = !radio1.Enabled;
+        listbox.Enabled = !listbox.Enabled;
+    }
+
+    void Button3_Clicked(object sender, void* args)
+    {
+        button1.Visible = !button1.Visible;
+        checkbox1.Visible = !checkbox1.Visible;
+        radio1.Visible = !radio1.Visible;
+        listbox.Visible = !listbox.Visible;
+    }
+
+    void OnDestroy()
+    {
+        PostQuitMessage(0);
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        /*canvas.FillRectangle(200, 100, 200, 30, brush);
+        canvas.DrawRectangle(200, 100, 200, 30, pen);
+        canvas.DrawText(201, 101, "Hello world!", font, 0x00ffff);
+
+        // Draw the bitmap at original size
+        canvas.DrawBitmap(400, 150, testBitmap.Width, testBitmap.Height, testBitmap);
+
+        // Draw the bitmap stretched to a different size
+        canvas.DrawBitmap(220, 250, 200, 150, testBitmap);
+            
+        canvas.DrawBitmap(30, 30, 320, 240, testBitmap2);*/
+    }
+
+    void OnMouseMove(int x, int y)
+    {
+        label1.Text = string.format("Mouse: %d, %d", x, y);
+    }
+
+    void OnMouseDown(int button, int x, int y)
+    {
+        label1.Text = string.format("Mouse down: %d %d, %d", button, x, y);
+    }
+
+    void OnMouseUp(int button, int x, int y)
+    {
+        label1.Text = string.format("Mouse up: %d %d, %d", button, x, y);
+    }
+
+    void VScroll_Scrolled(object sender, void *param)
+    {
+        Scrollbar scrollbar = sender as Scrollbar;
+        if(scrollbar != null)
+        {
+            label1.Text = string.format("VScroll position: %d", scrollbar.Position);
+            hscroll.Position = scrollbar.Position;
+        }
+    }
+
+    void HScroll_Scrolled(object sender, void *param)
+    {
+        Scrollbar scrollbar = sender as Scrollbar;
+        if(scrollbar != null)
+        {
+            label1.Text = string.format("HScroll position: %d", scrollbar.Position);
+            vscroll.Position = scrollbar.Position;
+        }
+    }
+
+    void Listbox_SelectedIndexChanged(object sender, void *param)
+    {
+        object selectedItem = listbox.SelectedItem;
+        if(selectedItem != null)
+            label1.Text = string.format("Selected: %s", selectedItem.toString());
+        else
+            label1.Text = "Selected: (none)";
+    }
+
+    void Button4_Clicked(object sender, void *param)
+    {
+        listbox.SelectedIndex-=1;
+    }
+
+    void Button5_Clicked(object sender, void *param)
+    {
+        listbox.SelectedIndex+=1;
+    }
+
+    void Button6_Clicked(object sender, void *param)
+    {
+        object item = listbox.SelectedItem;
+        if(item != null)
+        {
+            listbox.Items.Remove(item);
+        }
+    }
+
+    void Button7_Clicked(object sender, void *param)
+    {
+        int newItemIndex = listbox.Items.Count + 1;
+        listbox.Items.Add(string.format("New Item %d", newItemIndex));
+    }
+}
+
+/*
+Textbox
+*/
+
+// Entry point for Windows applications
+int WinStart(long hInstance, long hPrevInstance, byte *pstrCommandLine, int nCmdShow)
+{
+    g_hInstance = hInstance;
+
+    Window window = new MyWindow();
+
+    window.Show(nCmdShow);
+
+    // Message loop
+    MSG msg = {};
+    while (GetMessageA(&msg, null, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessageA(&msg);
+    }
+
+    return 0;
+}
