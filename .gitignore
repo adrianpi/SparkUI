@@ -361,3 +361,12 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Jargon template files
+*.jrt
+
+# Generated DLL files
+*.dll
+
+# LLVM IR files
+*.ll
