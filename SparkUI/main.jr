@@ -9,6 +9,7 @@ const int WS_OVERLAPPEDWINDOW = 0x00CF0000;
 const int WS_CHILD = 0x40000000;
 const int WS_VISIBLE = 0x10000000;
 const int WS_POPUP = 0x80000000;
+const int WS_TABSTOP = 0x00010000;
 
 const int CS_VREDRAW = 0x0001;
 const int CS_HREDRAW = 0x0002;
@@ -33,6 +34,11 @@ const int WM_LBUTTONUP = 0x0202;
 const int WM_RBUTTONDOWN = 0x0204;
 const int WM_RBUTTONUP = 0x0205;
 const int WM_MOUSEWHEEL = 0x020A;
+const int WM_CTLCOLOREDIT = 0x0133;
+const int WM_SETFONT = 0x0030;
+const int WM_SETFOCUS = 0x0007;
+const int WM_KILLFOCUS = 0x0008;
+const int WM_ACTIVATE = 0x0006;
 
 const int WHEEL_DELTA = 120;
 
@@ -248,6 +254,7 @@ int Rectangle(long hdc, int left, int top, int right, int bottom) external;
 int Ellipse(long hdc, int left, int top, int right, int bottom) external;
 int SetBkMode(long hdc, int mode) external;
 uint SetTextColor(long hdc, uint color) external;
+uint SetBkColor(long hdc, uint color) external;
 int GetDeviceCaps(long hdc, int index) external;
 int MoveToEx(long hdc, int x, int y, POINT* lppt) external;
 int LineTo(long hdc, int x, int y) external;
@@ -267,6 +274,15 @@ int EnableWindow(long hWnd, int bEnable) external;
 int ClientToScreen(long hWnd, POINT* lpPoint) external;
 int ScreenToClient(long hWnd, POINT* lpPoint) external;
 int SetWindowPos(long hWnd, long hWndAfter, int x, int y, int w, int h, uint flags) external;
+long SendMessageA(long hWnd, uint Msg, ulong wParam, ulong lParam) external;
+int IsDialogMessage(long hWnd, MSG* lpMsg) external;
+long GetFocus() external;
+int SetFocus(long hWnd) external;
+int DrawFocusRect(long hdc, RECT* lprc) external;
+long GetForegroundWindow() external;
+int SetActiveWindow(long hWnd) external;
+int SetForegroundWindow(long hWnd) external;
+int DestroyWindow(long hWnd) external;
 
 int MulDiv(int x, int y, int z)
 {
@@ -678,6 +694,10 @@ class WindowDefaults
     static uint ButtonBackColorActive = 0x9e5a00;
     static uint ButtonBackColorDisabled = 0x808080;
 
+    static uint TextboxBackColor = 0x333333;
+    static uint TextboxForeColor = 0xffffff;
+    static Brush TextboxBackBrush = new Brush(WindowDefaults.TextboxBackColor);
+
     static Bitmap CheckboxChecked = Bitmap.FromFile("Checkbox_Checked.bmp");
     static Bitmap CheckboxUnchecked = Bitmap.FromFile("Checkbox_Unchecked.bmp");
     static Bitmap CheckboxDim = Bitmap.FromFile("Checkbox_Dim.bmp");
@@ -721,6 +741,7 @@ class Window
     bool visible = false;
     bool enabled = true;
     static Window hoverWindow = null;
+    static Window activeWindow = null;
 
     Window constructor()
     {
@@ -745,9 +766,14 @@ class Window
         return WS_OVERLAPPEDWINDOW;
     }
 
-    void RegisterClass()
+    virtual string GetWindowClassName()
     {
-        className = getClassName();
+        return getClassName();
+    }
+
+    virtual void RegisterClass()
+    {
+        className = GetWindowClassName();
 
         WNDCLASSA wc = {};
         wc.style         = GetClassStyle();
@@ -878,6 +904,7 @@ class Window
 
     virtual long WndProc(long hwnd, uint uMsg, ulong wParam, ulong lParam)
     {
+
         if(uMsg == WM_CREATE)
         {
             OnCreate();
@@ -887,7 +914,21 @@ class Window
             OnDestroy();
             if(Window.hoverWindow == this)
                 Window.hoverWindow = null;
+            if(Window.activeWindow == this)
+                Window.activeWindow = null;
             hWnd = 0;
+        }
+        else if(uMsg == WM_ACTIVATE)
+        {
+            if((wParam & 0xffff) == 0/*WA_INACTIVE*/)
+            {
+                Log("Inactive %s", getClassName());
+            }
+            else
+            {
+                Log("Active %s", getClassName());
+                Window.activeWindow = this;
+            }
         }
         else if(uMsg == WM_ERASEBKG)
         {
@@ -954,6 +995,15 @@ class Window
             else if(delta < 0)
                 OnMouseWheel(-1, x, y);
         }
+        else if(uMsg == WM_CTLCOLOREDIT)
+        {
+            long hdcEdit = wParam;
+
+            SetTextColor(hdcEdit, WindowDefaults.TextboxForeColor);
+            SetBkColor(hdcEdit, WindowDefaults.TextboxBackColor);
+
+            return WindowDefaults.TextboxBackBrush.hBrush;
+        }
         return DefWindowProcA(hwnd, uMsg, wParam, lParam);
     }
 
@@ -1002,6 +1052,42 @@ class Control : Window
         this.height = height;
         this.visible = true;
         return this;
+    }
+
+    virtual void OnEnter() 
+    {
+        Invalidate();
+    }
+
+    virtual void OnLeave() 
+    {
+        Invalidate();
+    }
+
+    bool HasFocus()
+    {
+        return GetFocus() == hWnd;
+    }
+
+    void Focus()
+    {
+        SetFocus(hWnd);
+    }
+
+    long WndProc(long hwnd, uint uMsg, ulong wParam, ulong lParam)
+    {
+        if(uMsg == WM_SETFOCUS)
+        {
+            OnEnter();
+        }
+        else if(uMsg == WM_KILLFOCUS)
+        {
+            OnLeave();
+        }
+        else
+        {
+            return base(hwnd, uMsg, wParam, lParam);
+        }
     }
 }
 
@@ -1075,6 +1161,11 @@ class Button : Control
         return this;
     }
 
+    uint GetWindowStyle()
+    {
+        return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
+    }
+
     void OnEnabled()
     {
         BackColor = WindowDefaults.ButtonBackColor;
@@ -1101,12 +1192,21 @@ class Button : Control
         int x = (width - ts.cx) / 2;
         int y = (height - ts.cy) / 2;
         canvas.DrawText(x, y, Text, this.Font, ForeColor);
+        if(HasFocus())
+        {
+            //RECT fr = {x-2, y-2, x+ts.cx+2, y+ts.cy+2};
+            RECT fr = {0, 0, width, height};
+            DrawFocusRect(canvas.hdc, &fr);
+        }
     }
 
     void OnMouseDown(int button, int x, int y)
     {
         if(button == 1)
+        {
+            Focus();
             SetCapture(hWnd);
+        }
     }
 
     void OnMouseUp(int button, int x, int y)
@@ -1135,6 +1235,11 @@ class Checkbox : Control
         Invalidate();
     }
 
+    uint GetWindowStyle()
+    {
+        return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
+    }
+
     Checkbox constructor(Window parent, int x, int y, int width, int height)
     {
         base(parent, x, y, width, height);
@@ -1158,12 +1263,21 @@ class Checkbox : Control
         if(!Enabled)
             canvas.DrawBitmap(0, 0, 16, 16, WindowDefaults.CheckboxDim);
         canvas.DrawText(20, 0, Text, this.Font, ForeColor);
+        if(HasFocus())
+        {
+            SIZE sz = canvas.MeasureText(Text, this.Font);
+            RECT fr = {18, 0, 18+sz.cx+4, sz.cy+2};
+            DrawFocusRect(canvas.hdc, &fr);
+        }
     }
 
     void OnMouseDown(int button, int x, int y)
     {
         if(button == 1)
+        {
+            Focus();
             SetCapture(hWnd);
+        }
     }
 
     void OnMouseUp(int button, int x, int y)
@@ -1194,6 +1308,11 @@ class Radiobutton : Control
         Invalidate();
     }
 
+    uint GetWindowStyle()
+    {
+        return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
+    }
+
     Radiobutton constructor(Window parent, int x, int y, int width, int height)
     {
         base(parent, x, y, width, height);
@@ -1217,12 +1336,21 @@ class Radiobutton : Control
         if(!Enabled)
             canvas.DrawBitmap(0, 0, 16, 16, WindowDefaults.RadiobuttonDim);
         canvas.DrawText(20, 0, Text, this.Font, ForeColor);
+        if(HasFocus())
+        {
+            SIZE sz = canvas.MeasureText(Text, this.Font);
+            RECT fr = {18, 0, 18+sz.cx+4, sz.cy+2};
+            DrawFocusRect(canvas.hdc, &fr);
+        }
     }
 
     void OnMouseDown(int button, int x, int y)
     {
         if(button == 1)
+        {
+            Focus();
             SetCapture(hWnd);
+        }
     }
 
     private void UncheckOthers()
@@ -1671,15 +1799,15 @@ class ListItems : Control
         }
     }
 
-    void OnMouseDown(int button, int x, int y)
+    void OnMouseUp(int button, int x, int y)
     {
         if(button == 1)
         {
             int itemHeight = 20;
             int itemIndex = topIndex + y / itemHeight;
+            Listbox listbox = (Listbox)parent;
             if(itemIndex >= 0 && itemIndex < items.count)
             {
-                Listbox listbox = (Listbox)parent;
                 if(itemIndex != listbox.selectedIndex)
                 {
                     listbox.selectedIndex = itemIndex;
@@ -1688,6 +1816,7 @@ class ListItems : Control
                 }
                 listbox.Clicked.invoke(listbox, null);
             }
+            listbox.Focus();
         }
     }
 
@@ -1750,13 +1879,18 @@ class Listbox : Control
         return null;
     }
 
+    uint GetWindowStyle()
+    {
+        return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
+    }
+
     Listbox constructor(Window parent, int x, int y, int width, int height)
     {
         base(parent, x, y, width, height);
         GetHandle();
-        vscroll = new VScrollbar(this, width - 16, 0, 16, height);
+        vscroll = new VScrollbar(this, width - 16 - 1, 1, 16, height-2);
         vscroll.Scrolled += new Delegate(this, Listbox.VScroll_Scrolled);
-        Items = new ListItems(this, 0, 0, width - 16, height);
+        Items = new ListItems(this, 1, 1, width - 16 -2, height-2);
         return this;
     }
 
@@ -1774,6 +1908,15 @@ class Listbox : Control
     {
         Items.topIndex = vscroll.Position;
         Items.Invalidate();
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        if(HasFocus())
+        {
+            RECT fr = {0, 0, width, height};
+            DrawFocusRect(canvas.hdc, &fr);
+        }
     }
 }
 
@@ -1804,14 +1947,19 @@ class Dropdown : Control
     ListItems Items = null;
     Event Clicked = new Event();
 
+    uint GetWindowStyle()
+    {
+        return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
+    }
+
     Dropdown constructor(Window parent, int x, int y, int width, int height)
     {
         base(parent, x, y, width, height);        
         GetHandle();
         BackColor = 0x333333;
 
-        popup = new PopupWindow(parent, 0, 0, width, 160);
-        listbox = new Listbox(popup, 0, 0, width, 160);
+        popup = new PopupWindow(parent, 0, 0, width, 162);
+        listbox = new Listbox(popup, 0, 0, width, 162);
         Items = listbox.Items;
         listbox.Clicked += new Delegate(this, Dropdown.Listbox_Clicked);
         return this;
@@ -1822,6 +1970,11 @@ class Dropdown : Control
         canvas.FillRectangle(0, 0, width, height, backBrush);
         canvas.DrawBitmap(width - 16, (height - 16) / 2, 16, 16, WindowDefaults.DropdownArrow);
         canvas.DrawText(2, 1, Text, this.Font, ForeColor);
+        if(HasFocus())
+        {
+            RECT fr = {0, 0, width, height};
+            DrawFocusRect(canvas.hdc, &fr);
+        }
     }
 
     void OnMouseDown(int button, int x, int y)
@@ -1834,10 +1987,14 @@ class Dropdown : Control
                 ClientToScreen(parent.hWnd, &pt);
                 popup.SetPosition(pt.x, pt.y);
                 popup.Visible = true;
+                EnableWindow(popup.hWnd, true);
+                listbox.Focus();
             }
             else
             {
-                popup.Visible = false;
+                popup.Visible = false;  
+                EnableWindow(popup.hWnd, false);
+                Focus();
             }
         }
     }
@@ -1847,10 +2004,13 @@ class Dropdown : Control
         if(listbox.SelectedIndex >= 0)
         {
             Text = listbox.SelectedItem.toString();
-            popup.Visible = false;
             Clicked.invoke(this, null);
         }
         popup.Visible = false;
+        EnableWindow(popup.hWnd, false);
+        //DestroyWindow(popup.hWnd);
+        SetActiveWindow(parent.hWnd);
+        Focus();
     }
 }
 
@@ -1912,6 +2072,33 @@ class Picturebox : Panel
     }
 }
 
+class Textbox : Control
+{
+    Textbox constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        BackColor = 0x333333;
+        SendMessageA(hWnd, WM_SETFONT, WindowDefaults.NormalTextFont.hFont, 0);
+        return this;
+    }
+
+    string GetWindowClassName()
+    {
+        return "EDIT";
+    }
+
+    uint GetWindowStyle()
+    {
+        return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
+    }
+
+    void RegisterClass()
+    {
+        className = GetWindowClassName();
+    }
+}
+
 class MyWindow : Window
 {
     Brush bkgBrush = new Brush(0xffffee);
@@ -1938,6 +2125,8 @@ class MyWindow : Window
     Dropdown dropdown = null;
     Panel panel = null;
     Picturebox picturebox = null;
+    Textbox textbox = null;
+    Textbox textbox2 = null;
 
     void OnCreate()
     {
@@ -1999,7 +2188,7 @@ class MyWindow : Window
         hscroll = new HScrollbar(this, 30, 210, 150, 16);
         hscroll.Scrolled += new Delegate(this, MyWindow.HScroll_Scrolled);
 
-        listbox = new Listbox(this, 200, 210, 200, 200);
+        listbox = new Listbox(this, 200, 210, 200, 202);
 
         for(int i = 0; i < 50; ++i)
         {
@@ -2036,6 +2225,9 @@ class MyWindow : Window
 
         picturebox = new Picturebox(this, 440, 10, 240, 180);
         picturebox.Image = testBitmap2;
+
+        textbox = new Textbox(this, 240, 10, 150, 20);
+        textbox2 = new Textbox(this, 240, 40, 150, 20);
 
     }
 
@@ -2167,8 +2359,11 @@ int WinStart(long hInstance, long hPrevInstance, byte *pstrCommandLine, int nCmd
     MSG msg = {};
     while (GetMessageA(&msg, null, 0, 0))
     {
-        TranslateMessage(&msg);
-        DispatchMessageA(&msg);
+        if(Window.activeWindow == null || !IsDialogMessage(Window.activeWindow.hWnd, &msg))
+        {
+            TranslateMessage(&msg);
+            DispatchMessageA(&msg);
+        }
     }
 
     return 0;
