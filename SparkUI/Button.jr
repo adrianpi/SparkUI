@@ -1,0 +1,85 @@
+using jargon;
+
+class Button : Control
+{
+    Event Clicked = new Event();
+
+    Button constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        BackColor = WindowDefaults.ButtonBackColor;
+        return this;
+    }
+
+    uint GetWindowStyle()
+    {
+        return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
+    }
+
+    void OnEnabled()
+    {
+        BackColor = WindowDefaults.ButtonBackColor;
+    }
+
+    void OnDisabled()
+    {
+        BackColor = WindowDefaults.ButtonBackColorDisabled;
+    }
+
+    void OnMouseEnter()
+    {
+        BackColor = WindowDefaults.ButtonBackColorActive;
+    }
+
+    void OnMouseLeave()
+    {
+        BackColor = WindowDefaults.ButtonBackColor;
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        SIZE ts = canvas.MeasureText(Text, this.Font);
+        int x = (width - ts.cx) / 2;
+        int y = (height - ts.cy) / 2;
+        canvas.DrawText(x, y, Text, this.Font, ForeColor);
+        if(HasFocus())
+        {
+            //RECT fr = {x-2, y-2, x+ts.cx+2, y+ts.cy+2};
+            RECT fr = {0, 0, width, height};
+            DrawFocusRect(canvas.hdc, &fr);
+        }
+    }
+
+    void OnMouseDown(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            Focus();
+            SetCapture(hWnd);
+        }
+    }
+
+    void OnMouseUp(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            ReleaseCapture();
+            RECT r = ClientRect;
+            if(x>= 0 && x < r.right && y >= 0 && y < r.bottom)
+            {
+                Clicked.invoke(this, null);
+            }
+        }
+    }
+
+    int OnKeyDown(int key, int flags)
+    {
+        if(key == VK_SPACE)
+        {
+            Clicked.invoke(this, null);
+            return 0;
+        }
+        return 1;
+    }
+}

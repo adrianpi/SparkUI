@@ -1,0 +1,75 @@
+using jargon;
+
+class Textbox : Control
+{
+    Event TextChanged = new Event();
+    long originalWndProc = 0;
+
+    Textbox constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        BackColor = 0x333333;
+        SendMessageA(hWnd, WM_SETFONT, WindowDefaults.NormalTextFont.hFont, 0);
+
+        // Store the instance pointer in GWLP_USERDATA for the subclassed proc
+        SetWindowLongPtrA(hWnd, GWLP_USERDATA, this);
+
+        // Subclass the EDIT control to intercept messages
+        originalWndProc = GetWindowLongPtrA(hWnd, GWLP_WNDPROC);
+        void* wp = Textbox._EditWndProc;
+        SetWindowLongPtrA(hWnd, GWLP_WNDPROC, wp);
+
+        return this;
+    }
+
+    string GetWindowClassName()
+    {
+        return "EDIT";
+    }
+
+    uint GetWindowStyle()
+    {
+        return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
+    }
+
+    void RegisterClass()
+    {
+        className = GetWindowClassName();
+    }
+
+    void OnLeave()
+    {
+        base();
+        byte *temp = (byte*)memory.alloc(1024);
+        GetWindowTextA(hWnd, temp, 1024);
+        string stemp = new string(temp);
+        if(stemp != Text)
+        {
+            Text = stemp;
+            TextChanged.invoke(this, null);
+        }
+    }
+
+    static long _EditWndProc(long hwnd, uint uMsg, ulong wParam, ulong lParam)
+    {
+        // Get the Textbox instance from GWLP_USERDATA
+        long ptr = GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+        Textbox* textbox = (Textbox*)ptr;
+
+        if(textbox != null)
+        {
+            // Handle WM_KILLFOCUS to call OnLeave
+            if(uMsg == WM_KILLFOCUS)
+            {
+                textbox.OnLeave();
+            }
+
+            // Chain to original EDIT window procedure
+            return CallWindowProcA(textbox.originalWndProc, hwnd, uMsg, wParam, lParam);
+        }
+
+        // Fallback if we don't have the instance
+        return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+    }
+}

@@ -1,0 +1,30 @@
+using jargon;
+
+class Picturebox : Panel
+{
+    Bitmap bitmap;
+
+    Picturebox constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        return this;
+    }
+
+    Bitmap get Image() => bitmap;
+    void set Image(Bitmap value)
+    {
+        bitmap = value;
+        Invalidate();
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        if(bitmap != null)
+        {
+            int b = border ? 1 : 0;
+            canvas.DrawBitmap(b, b, width - 2 * b, height - 2 * b, bitmap);
+        }
+        base(canvas);
+    }
+}

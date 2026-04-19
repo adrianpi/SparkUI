@@ -1,0 +1,99 @@
+using jargon;
+
+class Radiobutton : Control
+{
+    Event Clicked = new Event();
+    bool checked = false;
+    int Group = 0;
+
+    bool get Checked() => checked;
+    void set Checked(bool value)
+    {
+        checked = value;
+        Invalidate();
+    }
+
+    uint GetWindowStyle()
+    {
+        return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
+    }
+
+    Radiobutton constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        return this;
+    }
+
+    void OnEnabled()
+    {
+        ForeColor = WindowDefaults.WindowForeColor;
+    }
+
+    void OnDisabled()
+    {
+        ForeColor = WindowDefaults.WindowForeColorDisabled;
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        canvas.DrawBitmap(0, 0, 16, 16, Checked ? WindowDefaults.RadiobuttonChecked : WindowDefaults.RadiobuttonUnchecked);
+        if(!Enabled)
+            canvas.DrawBitmap(0, 0, 16, 16, WindowDefaults.RadiobuttonDim);
+        canvas.DrawText(20, 0, Text, this.Font, ForeColor);
+        if(HasFocus())
+        {
+            SIZE sz = canvas.MeasureText(Text, this.Font);
+            RECT fr = {18, 0, 18+sz.cx+4, sz.cy+2};
+            DrawFocusRect(canvas.hdc, &fr);
+        }
+    }
+
+    void OnMouseDown(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            Focus();
+            SetCapture(hWnd);
+        }
+    }
+
+    private void UncheckOthers()
+    {
+        for(int i = 0; i < parent.children.count; ++i)
+        {
+            Radiobutton other = parent.children[i] as Radiobutton;
+            if(other != null && other.Group == Group)
+            {
+                other.Checked = false;
+            }
+        }
+    }
+
+    void OnMouseUp(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            ReleaseCapture();
+            RECT r = ClientRect;
+            if(x>= 0 && x < r.right && y >= 0 && y < r.bottom)
+            {
+                UncheckOthers();
+                Checked = true;
+                Clicked.invoke(this, null);
+            }
+        }
+    }
+
+    int OnKeyDown(int key, int flags)
+    {
+        if(key == VK_SPACE)
+        {
+            UncheckOthers();
+            Checked = true;
+            Clicked.invoke(this, null);
+            return 0;
+        }
+        return 1;
+    }
+}

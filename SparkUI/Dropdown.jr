@@ -1,0 +1,86 @@
+using jargon;
+
+class Dropdown : Control
+{
+    PopupWindow popup = null;
+    Listbox listbox = null;
+    ListItems Items = null;
+    Event Clicked = new Event();
+
+    uint GetWindowStyle()
+    {
+        return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
+    }
+
+    Dropdown constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);        
+        GetHandle();
+        BackColor = 0x333333;
+
+        popup = new PopupWindow(parent, 0, 0, width, 162);
+        listbox = new Listbox(popup, 0, 0, width, 162);
+        Items = listbox.Items;
+        listbox.Clicked += new Delegate(this, Dropdown.Listbox_Clicked);
+        listbox.Confirmed += new Delegate(this, Dropdown.Listbox_Clicked);
+        return this;
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        canvas.FillRectangle(0, 0, width, height, backBrush);
+        canvas.DrawBitmap(width - 16, (height - 16) / 2, 16, 16, WindowDefaults.DropdownArrow);
+        canvas.DrawText(2, 1, Text, this.Font, ForeColor);
+        if(HasFocus())
+        {
+            RECT fr = {0, 0, width, height};
+            DrawFocusRect(canvas.hdc, &fr);
+        }
+    }
+
+    void OnMouseDown(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            if(!popup.Visible)
+            {
+                POINT pt = {this.x, this.y + height};
+                ClientToScreen(parent.hWnd, &pt);
+                popup.SetPosition(pt.x, pt.y);
+                popup.Visible = true;
+                EnableWindow(popup.hWnd, true);
+                listbox.Focus();
+            }
+            else
+            {
+                popup.Visible = false;  
+                EnableWindow(popup.hWnd, false);
+                Focus();
+            }
+        }
+    }
+
+    int OnKeyDown(int key, int flags)
+    {
+        if(key == VK_SPACE)
+        {
+            OnMouseDown(1, 0, 0);
+            return 0;
+        }
+        return base(key, flags);
+    }
+
+    void Listbox_Clicked(object sender, void *param)
+    {
+        if(listbox.SelectedIndex >= 0)
+        {
+            Text = listbox.SelectedItem.toString();
+            Clicked.invoke(this, null);
+        }
+        popup.Visible = false;
+        EnableWindow(popup.hWnd, false);
+        //DestroyWindow(popup.hWnd);
+        SetActiveWindow(parent.hWnd);
+        Focus();
+    }
+}

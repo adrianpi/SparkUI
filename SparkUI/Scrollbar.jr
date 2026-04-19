@@ -1,0 +1,44 @@
+using jargon;
+
+class Scrollbar : Control
+{
+    int MaxValue = 100;
+    int PageSize = 10;
+    int position = 0;
+    bool scrolling = false;
+    bool arrowsVisible = false;
+
+    Event Scrolled = new Event();
+
+    int get Position() => position;
+    void set Position(int value)
+    {
+        position = value;
+        if(position < 0) position = 0;
+        else if(position > MaxValue) position = MaxValue;
+        Invalidate();
+    }
+
+    Scrollbar constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        return this;
+    }
+
+    void OnPaintBackground(Canvas canvas)
+    {
+    }
+
+    void OnMouseEnter()
+    {
+        arrowsVisible = true;
+        Invalidate();
+    }
+
+    void OnMouseLeave()
+    {
+        arrowsVisible = false;
+        Invalidate();
+    }
+}

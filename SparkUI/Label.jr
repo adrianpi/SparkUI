@@ -1,0 +1,16 @@
+using jargon;
+
+class Label : Control
+{
+    Label constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        return this;
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        canvas.DrawText(0, 0, Text, this.Font, ForeColor);
+    }
+}

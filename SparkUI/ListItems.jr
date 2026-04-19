@@ -1,0 +1,125 @@
+using jargon;
+
+class ListItems : Control
+{
+    array<object> items = new array<object>();
+    int topIndex = 0;
+
+    ListItems constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);        
+        GetHandle();
+        BackColor = 0x333333;
+        return this;
+    }
+
+    void Add(object item)
+    {
+        items.add(item);
+        Invalidate();
+        Listbox listbox = (Listbox)parent;
+        listbox.vscroll.MaxValue = (items.count - (listbox.height / 20)) >? 0;        
+        int itemHeight = 20;
+        int numVisible = height / itemHeight;
+        listbox.vscroll.PageSize = numVisible;
+        listbox.vscroll.Invalidate();
+    }
+
+    void Remove(object item)
+    {
+        if(items.contains(item))
+        {
+            items.remove(item);
+            Listbox listbox = (Listbox)parent;
+            listbox.vscroll.MaxValue = (items.count - (listbox.height / 20)) >? 0;
+            int itemHeight = 20;
+            if(listbox.selectedIndex >= items.count)
+            {
+                listbox.selectedIndex = items.count - 1;                
+            }
+            if(listbox.selectedIndex < topIndex)
+                topIndex = listbox.selectedIndex >? 0;
+            listbox.vscroll.Position = topIndex;
+            topIndex = listbox.vscroll.Position;
+            Invalidate();
+            listbox.vscroll.Invalidate();
+            listbox.SelectedIndexChanged.invoke(listbox, null);
+        }
+    }
+
+    object get_item(int index) => items[index];
+
+    void set_item(int index, object value)
+    {
+        if(index >= 0 && index < items.count)
+        {
+            items[index] = value;
+            Invalidate();
+        }
+    }
+
+    int get Count() => items.count;
+
+    void OnPaint(Canvas canvas)
+    {
+        int itemHeight = 20;
+        int numVisible = height / itemHeight;
+        Listbox listbox = (Listbox)parent;
+        for(int i = 0; i < numVisible; ++i)
+        {
+            int itemIndex = topIndex + i;
+            if(itemIndex >= items.count)
+                break;
+            if(itemIndex == listbox.selectedIndex)
+            {
+                canvas.FillRectangle(0, i * itemHeight, width, itemHeight, new Brush(0xaa5555));
+            }
+            string text = items[itemIndex].toString();
+            canvas.DrawText(2, i * itemHeight + 1, text, this.Font, listbox.Enabled ? ForeColor : WindowDefaults.WindowForeColorDisabled);
+        }
+    }
+
+    void OnMouseUp(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            int itemHeight = 20;
+            int itemIndex = topIndex + y / itemHeight;
+            Listbox listbox = (Listbox)parent;
+            if(itemIndex >= 0 && itemIndex < items.count)
+            {
+                if(itemIndex != listbox.selectedIndex)
+                {
+                    listbox.selectedIndex = itemIndex;
+                    Invalidate();
+                    listbox.SelectedIndexChanged.invoke(listbox, null);
+                }
+                listbox.Clicked.invoke(listbox, null);
+            }
+            listbox.Focus();
+        }
+    }
+
+    void OnMouseWheel(int delta, int x, int y)
+    {
+        Listbox listbox = (Listbox)parent;
+        if(delta > 0)
+        {
+            if(listbox.vscroll.Position > 0)
+            {
+                listbox.vscroll.Position -= 1;
+                topIndex = listbox.vscroll.Position;
+                Invalidate();
+            }
+        }
+        else if(delta < 0)
+        {
+            if(listbox.vscroll.Position < listbox.vscroll.MaxValue)
+            {
+                listbox.vscroll.Position += 1;
+                topIndex = listbox.vscroll.Position;
+                Invalidate();
+            }
+        }
+    }
+}

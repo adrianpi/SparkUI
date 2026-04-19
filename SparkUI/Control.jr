@@ -1,0 +1,59 @@
+using jargon;
+
+class Control : Window
+{
+    uint GetWindowStyle()
+    {
+        return WS_CHILD | WS_VISIBLE;
+    }
+
+    Control constructor(Window parent, int x, int y, int width, int height)
+    {
+        base();
+        this.parent = parent;
+        if(parent)
+            parent.children.add(this);
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.visible = true;
+        return this;
+    }
+
+    virtual void OnEnter() 
+    {
+        Invalidate();
+    }
+
+    virtual void OnLeave() 
+    {
+        Invalidate();
+    }
+
+    bool HasFocus()
+    {
+        return GetFocus() == hWnd;
+    }
+
+    void Focus()
+    {
+        SetFocus(hWnd);
+    }
+
+    long WndProc(long hwnd, uint uMsg, ulong wParam, ulong lParam)
+    {
+        if(uMsg == WM_SETFOCUS)
+        {
+            OnEnter();
+        }
+        else if(uMsg == WM_KILLFOCUS)
+        {
+            OnLeave();
+        }
+        else
+        {
+            return base(hwnd, uMsg, wParam, lParam);
+        }
+    }
+}

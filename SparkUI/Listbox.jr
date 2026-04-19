@@ -1,0 +1,153 @@
+using jargon;
+
+class Listbox : Control
+{
+    VScrollbar vscroll;
+    ListItems Items;
+    int selectedIndex = -1;
+    Event SelectedIndexChanged = new Event();
+    Event Clicked = new Event();
+    Event Confirmed = new Event();
+
+    int get SelectedIndex() => selectedIndex;
+    void set SelectedIndex(int value)
+    {
+        if(value >= -1 && value < Items.Count)
+        {
+            selectedIndex = value;
+            if(selectedIndex > -1)
+            {
+                int itemHeight = 20;
+                int numVisible = height / itemHeight;
+                if(selectedIndex < Items.topIndex)
+                    Items.topIndex = selectedIndex;
+                else if(selectedIndex > Items.topIndex + numVisible - 1)
+                    Items.topIndex = selectedIndex - numVisible + 1;
+                vscroll.Position = Items.topIndex;               
+            } 
+            Items.Invalidate();
+        }
+    }
+
+    object get SelectedItem()
+    {
+        if(selectedIndex >= 0 && selectedIndex < Items.Count)
+            return Items.items[selectedIndex];
+        return null;
+    }
+
+    uint GetWindowStyle()
+    {
+        return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
+    }
+
+    Listbox constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        vscroll = new VScrollbar(this, width - 16 - 1, 1, 16, height-2);
+        vscroll.Scrolled += new Delegate(this, Listbox.VScroll_Scrolled);
+        Items = new ListItems(this, 1, 1, width - 16 -2, height-2);
+        return this;
+    }
+
+    void OnEnabled()
+    {
+        Items.Invalidate();
+    }
+
+    void OnDisabled()
+    {
+        Items.Invalidate();
+    }
+
+    void VScroll_Scrolled(object sender, void* args)
+    {
+        Items.topIndex = vscroll.Position;
+        Items.Invalidate();
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        if(HasFocus())
+        {
+            RECT fr = {0, 0, width, height};
+            DrawFocusRect(canvas.hdc, &fr);
+        }
+    }
+
+    int OnKeyPreview(int key, int flags)
+    {
+        // Return 1 for VK_UP and VK_DOWN to skip IsDialogMessage and TranslateMessage
+        if(key == VK_UP || key == VK_DOWN || key == VK_RETURN)
+            return 1;
+        return 0;
+    }
+
+    int OnKeyDown(int key, int flags)
+    {
+        if(key == VK_UP)
+        {
+            if(selectedIndex > 0)
+            {
+                SelectedIndex = selectedIndex - 1;
+                SelectedIndexChanged.invoke(this, null);
+            }
+            return 0;
+        }
+        else if(key == VK_DOWN)
+        {
+            if(selectedIndex < Items.Count - 1)
+            {
+                SelectedIndex = selectedIndex + 1;
+                SelectedIndexChanged.invoke(this, null);
+            }
+            return 0;
+        }
+        else if(key == VK_PAGE_UP) // Page Up
+        {
+            int itemHeight = 20;
+            int numVisible = height / itemHeight;
+            if(selectedIndex > 0)
+            {
+                SelectedIndex = (selectedIndex - numVisible) >? 0;
+                SelectedIndexChanged.invoke(this, null);
+            }
+            return 0;
+        }
+        else if(key == VK_PAGE_DOWN) // Page Down
+        {
+            int itemHeight = 20;
+            int numVisible = height / itemHeight;
+            if(selectedIndex < Items.Count - 1)
+            {
+                SelectedIndex = (selectedIndex + numVisible) <? (Items.Count - 1);
+                SelectedIndexChanged.invoke(this, null);
+            }
+            return 0;
+        }
+        else if(key == VK_HOME)
+        {
+            if(Items.Count > 0)
+            {
+                SelectedIndex = 0;
+                SelectedIndexChanged.invoke(this, null);
+            }
+            return 0;
+        }
+        else if(key == VK_END)
+        {
+            if(Items.Count > 0)
+            {
+                SelectedIndex = Items.Count - 1;
+                SelectedIndexChanged.invoke(this, null);
+            }
+            return 0;
+        }
+        else if(key == VK_RETURN)
+        {
+            Confirmed.invoke(this, null);
+        }
+        return base(key, flags);
+    }
+}

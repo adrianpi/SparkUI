@@ -1,0 +1,21 @@
+using jargon;
+
+class PopupWindow : Window
+{
+    PopupWindow constructor(Window parent, int x, int y, int width, int height)
+    {
+        base();
+        this.parent = parent;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        CreateHandle();
+        return this;
+    }
+
+    uint GetWindowStyle()
+    {
+        return WS_POPUP;
+    }
+}

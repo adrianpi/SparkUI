@@ -111,7 +111,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>jlc2.exe -g -k main.jr -o $(OutputPath)$(TargetFileName) -ladvapi32.lib -lole32.lib -loleaut32.lib -lkernel32.lib -luser32.lib -lgdi32.lib -lMsimg32.lib -SUBSYSTEM:WINDOWS</Command>
+      <Command>jlc2.exe -g -k main.jr Window.jr Control.jr Button.jr Checkbox.jr Dropdown.jr Label.jr Listbox.jr ListItems.jr MyWindow.jr Panel.jr Picturebox.jr PopupWindow.jr Radiobutton.jr Scrollbar.jr Textbox.jr HScrollbar.jr VScrollbar.jr -o $(OutputPath)$(TargetFileName) -ladvapi32.lib -lole32.lib -loleaut32.lib -lkernel32.lib -luser32.lib -lgdi32.lib -lMsimg32.lib -SUBSYSTEM:WINDOWS</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -130,7 +130,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="Button.jr" />
+    <None Include="Checkbox.jr" />
+    <None Include="Control.jr" />
+    <None Include="Dropdown.jr" />
+    <None Include="HScrollbar.jr" />
+    <None Include="Label.jr" />
+    <None Include="Listbox.jr" />
+    <None Include="ListItems.jr" />
     <None Include="main.jr" />
+    <None Include="MyWindow.jr" />
+    <None Include="Panel.jr" />
+    <None Include="Picturebox.jr" />
+    <None Include="PopupWindow.jr" />
+    <None Include="Radiobutton.jr" />
+    <None Include="Scrollbar.jr" />
+    <None Include="Textbox.jr" />
+    <None Include="VScrollbar.jr" />
+    <None Include="Window.jr" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

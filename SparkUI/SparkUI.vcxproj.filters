@@ -2,5 +2,22 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <None Include="main.jr" />
+    <None Include="Button.jr" />
+    <None Include="Checkbox.jr" />
+    <None Include="Control.jr" />
+    <None Include="Dropdown.jr" />
+    <None Include="HScrollbar.jr" />
+    <None Include="Label.jr" />
+    <None Include="Listbox.jr" />
+    <None Include="ListItems.jr" />
+    <None Include="MyWindow.jr" />
+    <None Include="Panel.jr" />
+    <None Include="Picturebox.jr" />
+    <None Include="PopupWindow.jr" />
+    <None Include="Radiobutton.jr" />
+    <None Include="Scrollbar.jr" />
+    <None Include="Textbox.jr" />
+    <None Include="VScrollbar.jr" />
+    <None Include="Window.jr" />
   </ItemGroup>
 </Project>

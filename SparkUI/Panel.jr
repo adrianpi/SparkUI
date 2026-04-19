@@ -1,0 +1,30 @@
+using jargon;
+
+class Panel : Control
+{
+    bool border = true;
+    Pen forePen;
+
+    Panel constructor(Window parent, int x, int y, int w, int h)
+    {
+        base(parent, x, y, w, h);        
+        GetHandle();
+        forePen = new Pen(PS_SOLID, 1, ForeColor);
+        return this;
+    }
+
+    bool get Border() => border;
+    void set Border(bool value)
+    {
+        border = value;
+        Invalidate();
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        if(border)
+        {
+            canvas.DrawRectangle(0, 0, width, height, forePen);
+        }
+    }
+}

@@ -1,0 +1,144 @@
+using jargon;
+
+class HScrollbar : Scrollbar
+{
+    HScrollbar constructor(Window parent, int x, int y, int width, int height)
+    {
+        base(parent, x, y, width, height);
+        GetHandle();
+        return this;
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        canvas.FillRectangle(0, 0, width, height, new Brush(0x333333));
+
+        if(arrowsVisible)
+        {
+            canvas.DrawBitmap(0, 0, 16, 16, WindowDefaults.ScrollLeft);
+            canvas.DrawBitmap(width-16, 0, 16, 16, WindowDefaults.ScrollRight);
+        }
+        
+        // Calculate thumb size and position
+        int trackWidth = width - 32;
+        int contentSize = MaxValue + PageSize; // Total scrollable content
+
+        if(contentSize > 0)
+        {        
+            // Thumb represents PageSize / ContentSize ratio
+            int thumbWidth = (PageSize * trackWidth) / contentSize;
+        
+            // Minimum thumb size for usability
+            if(thumbWidth < 16)
+                thumbWidth = 16;
+        
+            // Maximum thumb height (can't be larger than track)
+            if(thumbWidth > trackWidth)
+                thumbWidth = trackWidth;
+        
+            // Calculate thumb position within available space
+            int availableSpace = trackWidth - thumbWidth;
+            int thumbX = 16;
+        
+            if(MaxValue > 0 && availableSpace > 0)
+                thumbX = 16 + (position * availableSpace) / MaxValue;
+        
+            // Draw thumb
+            canvas.FillRoundRectangle(thumbX, 4, thumbWidth, height - 8, 8, 8, new Brush(0x777777));
+        }
+    }
+
+    void OnMouseDown(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            int trackWidth = width - 32;
+            int contentSize = MaxValue + PageSize;
+            int thumbWidth = (PageSize * trackWidth) / contentSize;
+            if(thumbWidth < 16) thumbWidth = 16;
+            if(thumbWidth > trackWidth) thumbWidth = trackWidth;
+            
+            int availableSpace = trackWidth - thumbWidth;
+            int thumbX = 16;
+            if(MaxValue > 0 && availableSpace > 0)
+                thumbX = 16 + (position * availableSpace) / MaxValue;
+            
+            if(x < 16)
+            {
+                if(position > 0)
+                {
+                    position--;
+                    Invalidate();
+                    Scrolled.invoke(this, null);
+                }
+            }
+            else if(x < thumbX)
+            {
+                if(position > 0)
+                {
+                    position -= PageSize;
+                    if(position < 0) position = 0;
+                    Invalidate();
+                    Scrolled.invoke(this, null);
+                }
+            }
+            else if(x < thumbX + thumbWidth)
+            {
+                // Clicked on thumb, do nothing (could implement dragging here)
+                scrolling = true;
+                SetCapture(hWnd);
+            }
+            else if(x < width-16)
+            {
+                if(position < MaxValue)
+                {
+                    position += PageSize;
+                    if(position > MaxValue) position = MaxValue;
+                    Invalidate();
+                    Scrolled.invoke(this, null);
+                }
+            }
+            else
+            {
+                if(position < MaxValue)
+                {
+                    position++;
+                    Invalidate();
+                    Scrolled.invoke(this, null);
+                }
+            }
+        }
+    }
+
+    void OnMouseUp(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            scrolling = false;
+            ReleaseCapture();
+        }
+    }
+
+    void OnMouseMove(int x, int y)
+    {
+        if(scrolling)
+        {
+            int trackWidth = width - 32;
+            int contentSize = MaxValue + PageSize;
+            int thumbWidth = (PageSize * trackWidth) / contentSize;
+            if(thumbWidth < 16) thumbWidth = 16;
+            if(thumbWidth > trackWidth) thumbWidth = trackWidth;
+            
+            int availableSpace = trackWidth - thumbWidth;
+            
+            if(availableSpace > 0)
+            {
+                position = ((x - 16) * MaxValue) / availableSpace;
+                if(position < 0) position = 0;
+                else if(position > MaxValue) position = MaxValue;
+                Invalidate();
+                Scrolled.invoke(this, null);
+            }
+        }
+    }
+}

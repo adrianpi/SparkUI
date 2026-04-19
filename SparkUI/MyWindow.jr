@@ -1,0 +1,244 @@
+using jargon;
+
+class MyWindow : Window
+{
+    Brush bkgBrush = new Brush(0xffffee);
+    Font font = new Font(10, 400, false, false, "Tahoma");
+    Pen pen = new Pen(PS_SOLID, 1, 0x0000ff);
+    Brush brush = new Brush(0xff0000);
+    //Bitmap testBitmap = null;
+    Bitmap testBitmap2 = null;
+    Label label1 = null;
+    Button button1 = null;
+    Button button2 = null;
+    Button button3 = null;
+    Checkbox checkbox1 = null;
+    Checkbox checkbox2 = null;
+    Radiobutton radio1 = null;
+    Radiobutton radio2 = null;
+    VScrollbar vscroll = null;
+    HScrollbar hscroll = null;
+    Listbox listbox = null;
+    Button button4 = null;
+    Button button5 = null;
+    Button button6 = null;
+    Button button7 = null;
+    Dropdown dropdown = null;
+    Panel panel = null;
+    Picturebox picturebox = null;
+    Textbox textbox = null;
+    Textbox textbox2 = null;
+
+    void OnCreate()
+    {
+        // Create a test bitmap (100x100 32bpp RGBA)
+        /*testBitmap = Bitmap.FromSize(100, 100, 32);
+
+        // Fill it with a gradient (example)
+        if(testBitmap != null)
+        {
+            uint* pixels = (uint*)testBitmap.PixelData;
+            if(pixels != null)
+            {
+                for(int y = 0; y < 100; y++)
+                {
+                    for(int x = 0; x < 100; x++)
+                    {
+                        uint r = (x * 255 / 100);
+                        uint g = (y * 255 / 100);
+                        uint b = 128;
+                        uint a = 0xff;
+                        pixels[y * 100 + x] = (a << 24) | (r << 16) | (g << 8) | b;
+                    }
+                }
+            }
+        }*/
+
+        testBitmap2 = Bitmap.FromFile("sparkUI32.bmp");
+
+        label1 = new Label(this, 10, 10, 200, 30);
+        label1.Text = "Label1";
+
+        button1 = new Button(this, 10, 50, 100, 30);
+        button1.Text = "Button1";
+        button1.Clicked += new Delegate(this, MyWindow.Button1_Clicked);
+
+        button2 = new Button(this, 10, 90, 100, 30);
+        button2.Text = "Button2";
+        button2.Clicked += new Delegate(this, MyWindow.Button2_Clicked);
+
+        button3 = new Button(this, 120, 90, 100, 30);
+        button3.Text = "Button3";
+        button3.Clicked += new Delegate(this, MyWindow.Button3_Clicked);
+
+        checkbox1 = new Checkbox(this, 10, 130, 100, 20);
+        checkbox1.Text = "Checkbox1";
+
+        checkbox2 = new Checkbox(this, 10, 150, 100, 20);
+        checkbox2.Text = "Checkbox2";
+
+        radio1 = new Radiobutton(this, 10, 170, 100, 20);
+        radio1.Text = "Radiobutton1";
+
+        radio2 = new Radiobutton(this, 10, 190, 100, 20);
+        radio2.Text = "Radiobutton2";
+
+        vscroll = new VScrollbar(this, 10, 210, 16, 150); 
+        vscroll.Scrolled += new Delegate(this, MyWindow.VScroll_Scrolled);
+
+        hscroll = new HScrollbar(this, 30, 210, 150, 16);
+        hscroll.Scrolled += new Delegate(this, MyWindow.HScroll_Scrolled);
+
+        listbox = new Listbox(this, 200, 210, 200, 202);
+
+        for(int i = 0; i < 50; ++i)
+        {
+            listbox.Items.Add(string.format("Item %d", i));
+        }
+
+        listbox.SelectedIndexChanged += new Delegate(this, MyWindow.Listbox_SelectedIndexChanged);
+
+        button4 = new Button(this, 410, 210, 20, 20);
+        button4.Text = "-";
+        button4.Clicked += new Delegate(this, MyWindow.Button4_Clicked);
+
+        button5 = new Button(this, 410, 230, 20, 20);
+        button5.Text = "+";
+        button5.Clicked += new Delegate(this, MyWindow.Button5_Clicked);
+
+        button6 = new Button(this, 410, 260, 20, 20);
+        button6.Text = "(-)";
+        button6.Clicked += new Delegate(this, MyWindow.Button6_Clicked);
+
+        button7 = new Button(this, 410, 280, 20, 20);
+        button7.Text = "(+)";
+        button7.Clicked += new Delegate(this, MyWindow.Button7_Clicked);
+
+        dropdown = new Dropdown(this, 200, 170, 200, 20);
+        dropdown.Text = "Dropdown";
+
+        for(int i = 0; i < 30; ++i)
+        {
+            dropdown.Items.Add(string.format("Dropdown Item %d", i));
+        }
+
+        panel = new Panel(this, 440, 210, 200, 200);
+
+        picturebox = new Picturebox(this, 440, 10, 240, 180);
+        picturebox.Image = testBitmap2;
+
+        textbox = new Textbox(this, 240, 10, 150, 20);
+        textbox2 = new Textbox(this, 240, 40, 150, 20);
+
+    }
+
+    void Button1_Clicked(object sender, void* args)
+    {
+        MessageBox.Show("Button1 Clicked!", "Info", 0);
+    }
+
+    void Button2_Clicked(object sender, void* args)
+    {
+        button1.Enabled = !button1.Enabled;
+        checkbox1.Enabled = !checkbox1.Enabled;
+        radio1.Enabled = !radio1.Enabled;
+        listbox.Enabled = !listbox.Enabled;
+    }
+
+    void Button3_Clicked(object sender, void* args)
+    {
+        button1.Visible = !button1.Visible;
+        checkbox1.Visible = !checkbox1.Visible;
+        radio1.Visible = !radio1.Visible;
+        listbox.Visible = !listbox.Visible;
+    }
+
+    void OnDestroy()
+    {
+        PostQuitMessage(0);
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        /*canvas.FillRectangle(200, 100, 200, 30, brush);
+        canvas.DrawRectangle(200, 100, 200, 30, pen);
+        canvas.DrawText(201, 101, "Hello world!", font, 0x00ffff);
+
+        // Draw the bitmap at original size
+        canvas.DrawBitmap(400, 150, testBitmap.Width, testBitmap.Height, testBitmap);
+
+        // Draw the bitmap stretched to a different size
+        canvas.DrawBitmap(220, 250, 200, 150, testBitmap);
+            
+        canvas.DrawBitmap(30, 30, 320, 240, testBitmap2);*/
+    }
+
+    void OnMouseMove(int x, int y)
+    {
+        label1.Text = string.format("Mouse: %d, %d", x, y);
+    }
+
+    void OnMouseDown(int button, int x, int y)
+    {
+        label1.Text = string.format("Mouse down: %d %d, %d", button, x, y);
+    }
+
+    void OnMouseUp(int button, int x, int y)
+    {
+        label1.Text = string.format("Mouse up: %d %d, %d", button, x, y);
+    }
+
+    void VScroll_Scrolled(object sender, void *param)
+    {
+        Scrollbar scrollbar = sender as Scrollbar;
+        if(scrollbar != null)
+        {
+            label1.Text = string.format("VScroll position: %d", scrollbar.Position);
+            hscroll.Position = scrollbar.Position;
+        }
+    }
+
+    void HScroll_Scrolled(object sender, void *param)
+    {
+        Scrollbar scrollbar = sender as Scrollbar;
+        if(scrollbar != null)
+        {
+            label1.Text = string.format("HScroll position: %d", scrollbar.Position);
+            vscroll.Position = scrollbar.Position;
+        }
+    }
+
+    void Listbox_SelectedIndexChanged(object sender, void *param)
+    {
+        object selectedItem = listbox.SelectedItem;
+        if(selectedItem != null)
+            label1.Text = string.format("Selected: %s", selectedItem.toString());
+        else
+            label1.Text = "Selected: (none)";
+    }
+
+    void Button4_Clicked(object sender, void *param)
+    {
+        listbox.SelectedIndex-=1;
+    }
+
+    void Button5_Clicked(object sender, void *param)
+    {
+        listbox.SelectedIndex+=1;
+    }
+
+    void Button6_Clicked(object sender, void *param)
+    {
+        object item = listbox.SelectedItem;
+        if(item != null)
+        {
+            listbox.Items.Remove(item);
+        }
+    }
+
+    void Button7_Clicked(object sender, void *param)
+    {
+        int newItemIndex = listbox.Items.Count + 1;
+        listbox.Items.Add(string.format("New Item %d", newItemIndex));
+    }
+}
