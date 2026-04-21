@@ -10,7 +10,6 @@
     <None Include="Label.jr" />
     <None Include="Listbox.jr" />
     <None Include="ListItems.jr" />
-    <None Include="MyWindow.jr" />
     <None Include="Panel.jr" />
     <None Include="Picturebox.jr" />
     <None Include="PopupWindow.jr" />
@@ -19,5 +18,6 @@
     <None Include="Textbox.jr" />
     <None Include="VScrollbar.jr" />
     <None Include="Window.jr" />
+    <None Include="Dialogs.jr" />
   </ItemGroup>
 </Project>

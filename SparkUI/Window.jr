@@ -1,5 +1,221 @@
 using jargon;
 
+struct MENUITEMINFO {
+    uint      cbSize;
+    uint      fMask;
+    uint      fType;
+    uint      fState;
+    uint      wID;
+    long      hSubMenu;
+    long      hbmpChecked;
+    long      hbmpUnchecked;
+    void*     dwItemData;
+    byte*     dwTypeData;
+    uint      cch;
+    long      hbmpItem;
+}
+
+struct DRAWITEMSTRUCT {
+    uint  CtlType;
+    uint  CtlID;
+    uint  itemID;
+    uint  itemAction;
+    uint  itemState;
+    long  hwndItem;
+    long  hDC;
+    RECT  rcItem;
+    void* itemData;
+} 
+
+struct UAHMENUITEMMETRICS
+{
+	SIZE rgsize[4];
+}
+
+struct UAHMENUPOPUPMETRICS
+{
+	uint rgcx[4];
+	uint fUpdateMaxWidths;
+}
+
+struct UAHMENU
+{
+	long hmenu;
+	long hdc;
+	uint dwFlags;
+}
+
+struct UAHMENUITEM
+{
+	int iPosition; // 0-based position of menu item in menubar
+	UAHMENUITEMMETRICS umim;
+	UAHMENUPOPUPMETRICS umpm;
+}
+
+struct UAHDRAWMENUITEM
+{
+	DRAWITEMSTRUCT dis; // itemID looks uninitialized
+	UAHMENU um;
+	UAHMENUITEM umi;
+}
+
+struct MENUBARINFO {
+    uint  cbSize;
+    RECT  rcBar;
+    long  hMenu;
+    long  hwndMenu;
+    int   flags;
+    /*bool  fBarFocused:1;
+    BOOL  fFocused:1;*/
+}
+
+enum WINDOWCOMPOSITIONATTRIB
+{
+	WCA_UNDEFINED = 0,
+	WCA_NCRENDERING_ENABLED = 1,
+	WCA_NCRENDERING_POLICY = 2,
+	WCA_TRANSITIONS_FORCEDISABLED = 3,
+	WCA_ALLOW_NCPAINT = 4,
+	WCA_CAPTION_BUTTON_BOUNDS = 5,
+	WCA_NONCLIENT_RTL_LAYOUT = 6,
+	WCA_FORCE_ICONIC_REPRESENTATION = 7,
+	WCA_EXTENDED_FRAME_BOUNDS = 8,
+	WCA_HAS_ICONIC_BITMAP = 9,
+	WCA_THEME_ATTRIBUTES = 10,
+	WCA_NCRENDERING_EXILED = 11,
+	WCA_NCADORNMENTINFO = 12,
+	WCA_EXCLUDED_FROM_LIVEPREVIEW = 13,
+	WCA_VIDEO_OVERLAY_ACTIVE = 14,
+	WCA_FORCE_ACTIVEWINDOW_APPEARANCE = 15,
+	WCA_DISALLOW_PEEK = 16,
+	WCA_CLOAK = 17,
+	WCA_CLOAKED = 18,
+	WCA_ACCENT_POLICY = 19,
+	WCA_FREEZE_REPRESENTATION = 20,
+	WCA_EVER_UNCLOAKED = 21,
+	WCA_VISUAL_OWNER = 22,
+	WCA_HOLOGRAPHIC = 23,
+	WCA_EXCLUDED_FROM_DDA = 24,
+	WCA_PASSIVEUPDATEMODE = 25,
+	WCA_USEDARKMODECOLORS = 26,
+	WCA_LAST = 27
+}
+
+struct WINDOWCOMPOSITIONATTRIBDATA
+{
+	WINDOWCOMPOSITIONATTRIB Attrib;
+	void* pvData;
+	uint  cbData;
+}
+
+const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
+
+struct MONITORINFO {
+    uint cbSize;
+    RECT rcMonitor;
+    RECT rcWork;
+    uint dwFlags;
+}
+
+long LoadLibraryA(byte *libName) external;
+void* GetProcAddress(long hModule, byte *procName) external;
+int SetWindowCompositionAttribute(long hWnd, WINDOWCOMPOSITIONATTRIBDATA*) external;
+
+int GetMenuBarInfo(long hwnd, long idObject, long idItem, MENUBARINFO* pmbi) external;
+int GetWindowRect(long hwnd, RECT* rect) external;
+int OffsetRect(RECT* rect, int dx, int dy) external;
+int FillRect(long hdc, RECT* rect, long hBrush) external;
+int GetMenuItemInfoA(long hMenu, uint uItem, bool fByPosition, MENUITEMINFO* mii) external;
+int SetMenuItemInfoA(long hMenu, uint uItem, bool fByPosition, MENUITEMINFO* mii) external;
+int DrawTextA(long hdc, byte* lpString, int nCount, RECT* lpRect, uint uFormat) external;
+long GetWindowDC(long hWnd) external;
+int IsWindow(long hWnd) external;
+int GetCursorPos(POINT* lpPoint) external;
+long MonitorFromPoint(long pt, uint dwFlags) external;
+int GetMonitorInfoA(long hMonitor, MONITORINFO* lpmi) external;
+int SetWindowTextA(long hWnd, byte* lpString) external;
+
+class MenuItem
+{
+    static int _id = 10000;
+    string Text;
+    uint Id;
+    PopupMenu SubMenu;
+
+    Event Clicked = new Event();
+
+    MenuItem constructor(string text, PopupMenu subMenu)
+    {
+        base();
+        Text = text;
+        SubMenu = subMenu;
+        Id = _id++;
+        return this;
+    }
+}
+
+class MenuBase
+{
+    long hMenu;
+    MenuBase Parent;
+
+    array<MenuItem> items = new array<MenuItem>();
+    void AddItem(MenuItem item)
+    {
+        items.add(item);
+        if(item.Text == "-")
+        {
+            AppendMenuA(hMenu, MF_SEPARATOR, 0, null);
+        }
+        else
+        {
+            AppendMenuA(hMenu, 
+                MF_STRING | (item.SubMenu != null ? MF_POPUP : 0), 
+                item.SubMenu != null ? item.SubMenu.hMenu : item.Id,
+                item.Text.c_str());
+        }
+    }
+
+    bool HandleCommand(uint commandId)
+    {
+        for(int i = 0; i < items.count; i++)
+        {
+            if(items[i].SubMenu != null)
+            {
+                if(items[i].SubMenu.HandleCommand(commandId))
+                    return true;
+            }
+            if(items[i].Id == commandId)
+            {
+                items[i].Clicked.invoke(items[i], null);
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+class PopupMenu : MenuBase
+{
+    PopupMenu constructor()
+    {
+        base();
+        hMenu = CreatePopupMenu();
+        return this;
+    }
+}
+
+class Menu : MenuBase
+{
+    Menu constructor()
+    {
+        base();
+        hMenu = CreateMenu();
+        return this;
+    }
+}
+
 class Window
 {
     long hWnd = 0;
@@ -20,6 +236,7 @@ class Window
     bool enabled = true;
     static Window hoverWindow = null;
     static Window activeWindow = null;
+    Menu menu;
 
     Window constructor()
     {
@@ -42,6 +259,11 @@ class Window
     virtual uint GetWindowStyle()
     {
         return WS_OVERLAPPEDWINDOW;
+    }
+
+    virtual int GetWindowStyleEx()
+    {
+        return 0;
     }
 
     virtual string GetWindowClassName()
@@ -69,7 +291,7 @@ class Window
         RegisterClass();
 
         hWnd = CreateWindowExA(
-            0,                  
+            GetWindowStyleEx(),
             className.c_str(),
             text.c_str(),       
             GetWindowStyle(),
@@ -113,6 +335,8 @@ class Window
     void set Text(string value)
     {
         text = value;
+        SetWindowTextA(hWnd, text.c_str());
+        OnTextChanged();
         Invalidate();
     }
 
@@ -142,11 +366,27 @@ class Window
             ShowWindow(hWnd, SW_HIDE);
     }
 
+    Menu get Menu() => menu;
+    void set Menu(Menu value)
+    {
+        menu = value;
+        SetMenu(hWnd, menu != null ? menu.hMenu : 0);
+        Invalidate();
+        DrawMenuBar(hWnd);
+    }
+
     void SetPosition(int x, int y)
     {
         SetWindowPos(GetHandle(), 0, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
         this.x = x;
         this.y = y;
+    }
+
+    void SetSize(int w, int h)
+    {
+        SetWindowPos(GetHandle(), 0, x, y, w, h, SWP_NOZORDER);
+        this.width = w;
+        this.height = h;
     }
 
     void Show(int nCmdShow)
@@ -160,8 +400,14 @@ class Window
         InvalidateRect(hWnd, null, 1);
     }
 
+    void Close()
+    {
+        DestroyWindow(hWnd);
+    }
+
     virtual void OnCreate() {}
     virtual void OnDestroy() {}
+    virtual void OnTextChanged() {}
 
     virtual void OnPaintBackground(Canvas canvas) 
     {
@@ -185,9 +431,28 @@ class Window
     virtual int OnKeyUp(int key, int flags) { return 0; }
     virtual int OnChar(int ch) { return 0; }
 
+    void DrawMenuBarLine(long hWnd)
+    {
+        MENUBARINFO mbi = {};
+        mbi.cbSize = sizeof(MENUBARINFO);
+        if(GetMenuBarInfo(hWnd, OBJID_MENU, 0, &mbi))
+        {
+            long hdc = GetWindowDC(hWnd);
+            RECT rcWindow;
+            GetWindowRect(hWnd, &rcWindow);
+            RECT rc;
+            rc.left = mbi.rcBar.left;
+            rc.right = mbi.rcBar.right;
+            rc.top = mbi.rcBar.bottom;
+            rc.bottom = rc.top + 1;
+            OffsetRect(&rc, -rcWindow.left, -rcWindow.top);
+            FillRect(hdc, &rc, WindowDefaults.MenuBackBrush.hBrush);
+            ReleaseDC(hWnd, hdc);
+        }
+    }
+
     virtual long WndProc(long hwnd, uint uMsg, ulong wParam, ulong lParam)
     {
-
         if(uMsg == WM_CREATE)
         {
             OnCreate();
@@ -206,12 +471,14 @@ class Window
             if((wParam & 0xffff) == 0/*WA_INACTIVE*/)
             {
                 Log("Inactive %s", getClassName());
+                       
             }
             else
             {
                 Log("Active %s", getClassName());
                 Window.activeWindow = this;
             }
+            DrawMenuBarLine(hWnd);
         }
         else if(uMsg == WM_ERASEBKG)
         {
@@ -303,6 +570,65 @@ class Window
         {
             return OnChar(wParam);
         }
+        else if(uMsg == WM_UAHDRAWMENU)
+        {
+            UAHMENU* pUDM = (UAHMENU*)lParam;
+            RECT rc = {};
+            
+            MENUBARINFO mbi = {};
+            mbi.cbSize = sizeof(MENUBARINFO);
+            GetMenuBarInfo(hWnd, OBJID_MENU, 0, &mbi);
+
+            RECT rcWindow;
+            GetWindowRect(hWnd, &rcWindow);
+            rc = mbi.rcBar;
+            OffsetRect(&rc, -rcWindow.left, -rcWindow.top);
+            
+            FillRect(pUDM.hdc, &rc, WindowDefaults.MenuBackBrush.hBrush);
+            return 1;
+        }
+        else if(uMsg == WM_NCPAINT)
+        {
+            long result = DefWindowProcA(hwnd, uMsg, wParam, lParam);
+            DrawMenuBarLine(hWnd);
+            return result;
+        }
+        else if(uMsg == WM_UAHDRAWMENUITEM)
+        {
+            UAHDRAWMENUITEM* pUDMI = (UAHDRAWMENUITEM*)lParam;
+
+            long brBackground = WindowDefaults.MenuBackBrush.hBrush;
+            byte menuString[256];
+            MENUITEMINFO mii;
+            mii.cbSize = sizeof(mii);
+            mii.fMask = MIIM_STRING;
+            mii.dwTypeData = menuString;
+            mii.cch = 255;
+            GetMenuItemInfoA(pUDMI.um.hmenu, pUDMI.umi.iPosition, 1, &mii);
+
+            uint dwFlags = DT_CENTER | DT_SINGLELINE | DT_VCENTER;
+
+            if ((pUDMI.dis.itemState & ODS_SELECTED) != 0 || (pUDMI.dis.itemState & ODS_HOTLIGHT) != 0) 
+            {
+                brBackground = GetStockObject(DKGRAY_BRUSH);
+            }   
+
+            if (pUDMI.dis.itemState & ODS_NOACCEL) {
+                dwFlags |= DT_HIDEPREFIX;
+            }
+
+            FillRect(pUDMI.um.hdc, &pUDMI.dis.rcItem, brBackground);
+            SetTextColor(pUDMI.um.hdc, WindowDefaults.WindowForeColor);
+            SetBkMode(pUDMI.um.hdc, TRANSPARENT);
+            DrawTextA(pUDMI.um.hdc, menuString, mii.cch, &pUDMI.dis.rcItem, dwFlags);
+            return 1;
+        }
+        else if(uMsg == WM_COMMAND)
+        {
+            uint commandId = wParam & 0xFFFF;
+            if(menu != null && menu.HandleCommand(commandId))
+                return 0;
+        }
         return DefWindowProcA(hwnd, uMsg, wParam, lParam);
     }
 
@@ -316,6 +642,27 @@ class Window
             SetWindowLongPtrA(hwnd, 0, createParams);
             window = (Window*)createParams;
             window.hWnd = hwnd;
+
+            if(window.GetWindowStyle() & WS_DLGFRAME)
+            {
+                long hUxTheme = LoadLibraryA("uxtheme.dll");
+                long hUser32 = LoadLibraryA("user32.dll");
+                int (*preferredAppMode)(int mode);
+                int (*setWindowCompositionAttribute)(long hWnd, WINDOWCOMPOSITIONATTRIBDATA*);
+                int (*allowDarkModeForWindow)(long hWnd, bool allow);
+
+                preferredAppMode = GetProcAddress(hUxTheme, 135);
+                allowDarkModeForWindow = GetProcAddress(hUxTheme, 133);
+                setWindowCompositionAttribute = GetProcAddress(hUser32, "SetWindowCompositionAttribute");
+
+                preferredAppMode(2);
+                int res = allowDarkModeForWindow(hwnd, true);
+                int value = 1;
+                DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
+                int dark = 1;
+                WINDOWCOMPOSITIONATTRIBDATA data = { WINDOWCOMPOSITIONATTRIB.WCA_USEDARKMODECOLORS, &dark, sizeof(dark) };
+                res = setWindowCompositionAttribute(hwnd, &data);
+            }            
         }
         else
         {
@@ -329,5 +676,183 @@ class Window
         }
 
         return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+    }
+}
+
+class Dialog : Window
+{
+    int ModalResult = 0;
+
+    uint GetWindowStyle()
+    {
+        return WS_POPUP | WS_CAPTION | WS_SYSMENU;
+    }
+
+    uint GetWindowStyleEx()
+    {
+        return WS_EX_DLGMODALFRAME;
+    }
+
+    void CenterWindow(long hwnd)
+    {
+        // Center the dialog on the monitor that contains the mouse cursor
+        POINT pt = {};
+        if(GetCursorPos(&pt))
+        {
+            long ptl = *(long*)&pt;
+            long hMon = MonitorFromPoint(ptl, MONITOR_DEFAULTTONEAREST);
+            if(hMon != 0)
+            {
+                MONITORINFO mi = {};
+                mi.cbSize = sizeof(mi);
+                if(GetMonitorInfoA(hMon, &mi))
+                {
+                    RECT wr = {};
+                    GetWindowRect(hwnd, &wr);
+                    int winW = wr.right - wr.left;
+                    int winH = wr.bottom - wr.top;
+
+                    int workW = mi.rcWork.right - mi.rcWork.left;
+                    int workH = mi.rcWork.bottom - mi.rcWork.top;
+
+                    int newX = mi.rcWork.left + (workW - winW) / 2;
+                    int newY = mi.rcWork.top + (workH - winH) / 2;
+
+                    SetPosition(newX, newY);
+                }
+            }
+        }
+    }
+
+    int ShowDialog(Window owner)
+    {
+        MSG msg;
+        bool done = false;
+
+        if(owner != null)
+        {
+            parent = owner;
+
+            EnableWindow(owner.hWnd, false);
+        }
+
+        // Ensure the window is created so we can size/position it
+        long hwnd = GetHandle();
+
+        CenterWindow(hwnd);
+
+        ShowWindow(hwnd, SW_SHOW);
+
+        while (!done && GetMessageA(&msg, null, 0, 0))
+        {
+            if (!IsDialogMessage(hWnd, &msg))
+            {
+                TranslateMessage(&msg);
+                DispatchMessageA(&msg);
+            }
+
+            if (!IsWindow(hWnd))
+                done = true;
+        }
+
+        if(owner != null)
+        {
+            // Re-enable the owner
+            EnableWindow(owner.hWnd, true);
+            SetForegroundWindow(owner.hWnd);
+            SetActiveWindow(owner.hWnd);
+            SetFocus(owner.hWnd);
+         }
+
+        return ModalResult;
+    }    
+}
+
+class MsgDialog : Dialog
+{
+    string Title = "Error";
+    string Message = "";
+    MsgFlags Flags = MsgFlags.OK;
+
+    void CreateButtons(int top, int width)
+    {
+        int buttons = Flags & 0x0f;
+
+        if(buttons == MsgFlags.OK)
+        {
+            Button okButton = new Button(this, width-130, top, 100, 30);
+            okButton.Text = "OK";
+            okButton.ModalResult = 1;
+        }
+        else if(buttons == MsgFlags.OKCancel)
+        {
+            Button okButton = new Button(this, width-240, top, 100, 30);
+            okButton.Text = "OK";
+            okButton.ModalResult = 1;
+            Button cancelButton = new Button(this, width-130, top, 100, 30);
+            cancelButton.Text = "Cancel";
+            cancelButton.ModalResult = 2;
+        }
+        else if(buttons == MsgFlags.YesNo)
+        {
+            Button okButton = new Button(this, width-240, top, 100, 30);
+            okButton.Text = "Yes";
+            okButton.ModalResult = 1;
+            Button cancelButton = new Button(this, width-130, top, 100, 30);
+            cancelButton.Text = "No";
+            cancelButton.ModalResult = 2;
+        }
+        else if(buttons == MsgFlags.YesNoCancel)
+        {
+            Button noButton = new Button(this, width-350, top, 100, 30);
+            noButton.Text = "Yes";
+            noButton.ModalResult = 1;
+            Button noButton = new Button(this, width-240, top, 100, 30);
+            noButton.Text = "No";
+            noButton.ModalResult = 2;
+            Button cancelButton = new Button(this, width-130, top, 100, 30);
+            cancelButton.Text = "Cancel";
+            cancelButton.ModalResult = 3;
+        }
+    }
+
+    void OnCreate()
+    {
+        if((Flags & 0xf0) != 0)
+        {
+            Picturebox picturebox = new Picturebox(this, 10, 10, 32, 32);
+            picturebox.Border = false;
+            if((Flags & MsgFlags.Info) != 0)
+                picturebox.Image = WindowDefaults.InfoIcon;
+            else if((Flags & MsgFlags.Question) != 0)
+                picturebox.Image = WindowDefaults.QuestionIcon;
+            else if((Flags & MsgFlags.Error) != 0)
+                picturebox.Image = WindowDefaults.ErrorIcon;
+        }
+
+        Label label = new Label(this, (Flags & 0xf0) != 0 ? 52 : 10, 10, 200, 30);
+        //label.Text = "Lorem ipsum dolor sit amet consectetur adipiscing elit dictumst, lacus curabitur nam litora sem erat platea, nec purus vestibulum commodo pulvinar porttitor vitae. Quisque nam malesuada vehicula dignissim cras congue, ante vestibulum nec pulvinar ultrices justo, ridiculus convallis facilisi diam mi. Suspendisse pharetra nisl quam ultrices cursus id, viverra cum ultricies arcu morbi habitant, primis duis rhoncus natoque mus, placerat nostra non facilisi sodales.\n\nProin turpis sociis quam massa sed cum lectus viverra tristique, orci dis et tempor fusce etiam enim quisque rhoncus, rutrum hac ullamcorper egestas quis justo pellentesque montes. Senectus vivamus tempus nullam sodales viverra bibendum tristique tempor fusce congue, gravida maecenas habitant faucibus egestas interdum laoreet luctus suspendisse pulvinar in, cum at elementum neque magnis tincidunt erat pretium eget. Duis facilisi accumsan ad vel enim nec eleifend dictum, massa ac fusce platea etiam luctus curabitur suspendisse, viverra eros posuere morbi penatibus non laoreet.";
+        label.Text = Message;
+        label.AutoSize = true;
+        label.AutoSizeMaxWidth = 600;
+
+        int minWidth = 300;
+        if((Flags & 0x0f) == MsgFlags.YesNoCancel)
+            minWidth = 450;
+
+        int top = label.y + (label.height >? 32) + 10;
+        int width = label.x + label.width + 20 >? minWidth;
+        
+        CreateButtons(top, width);
+        
+        int height = top + 80;
+        SetSize(width, height);
+
+        Text = Title;
+    }
+
+    void CloseButton_Clicked(object sender, void* args)
+    {
+        this.Close();
     }
 }

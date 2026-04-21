@@ -2,6 +2,33 @@ using jargon;
 
 class Label : Control
 {
+    bool autoSize = false;
+    int autoSizeMaxWidth = 0; // 0 = unlimited
+    int PaddingX = 0;
+    int PaddingY = 0;
+
+    bool get AutoSize() => autoSize;
+    void set AutoSize(bool value)
+    {
+        autoSize = value;
+        AutoSizeToText();
+        Invalidate();
+    }
+
+    int get AutoSizeMaxWidth() => autoSizeMaxWidth;
+    void set AutoSizeMaxWidth(int value)
+    {
+        autoSizeMaxWidth = value;
+        AutoSizeToText();
+        Invalidate();
+    }
+
+    void OnTextChanged()
+    {
+        AutoSizeToText();
+        Invalidate();
+    }
+
     Label constructor(Window parent, int x, int y, int width, int height)
     {
         base(parent, x, y, width, height);
@@ -9,8 +36,85 @@ class Label : Control
         return this;
     }
 
+    void AutoSizeToText()
+    {
+        if(Text == null || !autoSize)
+            return;
+
+        // Acquire a DC for measuring
+        long hdc = GetDC(0);
+        if(hdc == 0)
+            return;
+
+        long prev = SelectObject(hdc, this.Font.hFont);
+
+        // Measure single-line extents first
+        SIZE sz = {};
+        GetTextExtentPointA(hdc, Text.c_str(), Text.length, &sz);
+
+        int contentW = sz.cx;
+        int contentH = sz.cy;
+
+        int newW = contentW + PaddingX * 2;
+        int newH = contentH + PaddingY * 2;
+
+        if(autoSizeMaxWidth > 0)
+        {
+            // If single-line fits within the max width, use it.
+            if(contentW + PaddingX * 2 > autoSizeMaxWidth)
+            {
+                // Measure wrapped layout. Prepare rectangle with available width
+                RECT r = {};
+                r.left = 0;
+                r.top = 0;
+                r.right = autoSizeMaxWidth - PaddingX * 2; // available width for text
+                r.bottom = 0;
+
+                // DT_CALCRECT with DT_WORDBREAK will compute required rectangle
+                DrawTextA(hdc, Text.c_str(), -1, &r, DT_WORDBREAK | DT_CALCRECT);
+
+                int textW = (r.right - r.left);
+                int textH = (r.bottom - r.top);
+
+                newW = textW + PaddingX * 2;
+                newH = textH + PaddingY * 2;
+            }
+            else
+            {
+                // fits single-line within max width, use measured single-line size
+                newW = contentW + PaddingX * 2;
+                newH = contentH + PaddingY * 2;
+            }
+        }
+
+        // Update stored size and apply to window
+        this.width = newW;
+        this.height = newH;
+        SetWindowPos(GetHandle(), 0, this.x, this.y, newW, newH, SWP_NOZORDER);
+
+        // restore DC
+        SelectObject(hdc, prev);
+        ReleaseDC(0, hdc);
+    }
+
     void OnPaint(Canvas canvas)
     {
-        canvas.DrawText(0, 0, Text, this.Font, ForeColor);
+        //canvas.DrawText(0, 0, Text, this.Font, ForeColor);
+        long hdc = canvas.hdc;
+        long prevFont = SelectObject(hdc, this.Font.hFont);
+
+        RECT rc = {};
+        rc.left = PaddingX;
+        rc.top = PaddingY;
+        rc.right = this.width - PaddingX;
+        rc.bottom = this.height - PaddingY;
+
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, ForeColor);
+
+        uint flags = DT_WORDBREAK; // respects '\n' and wrapping
+        DrawTextA(hdc, Text.c_str(), -1, &rc, flags);
+
+        SelectObject(hdc, prevFont);
     }
 }

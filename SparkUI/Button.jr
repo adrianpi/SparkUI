@@ -2,6 +2,8 @@ using jargon;
 
 class Button : Control
 {
+    int ModalResult = -1;
+
     Event Clicked = new Event();
 
     Button constructor(Window parent, int x, int y, int width, int height)
@@ -60,6 +62,27 @@ class Button : Control
         }
     }
 
+    void DoClick()
+    {
+        Clicked.invoke(this, null);
+
+        if(ModalResult != -1)
+        {
+            Window w = parent;
+            while(w)
+            {
+                if(w is Dialog)
+                {
+                    Dialog d = w as Dialog;
+                    d.ModalResult = ModalResult;
+                    d.Close();
+                    break;
+                }
+                w = w.parent;
+            }
+        }
+    }
+
     void OnMouseUp(int button, int x, int y)
     {
         if(button == 1)
@@ -68,7 +91,7 @@ class Button : Control
             RECT r = ClientRect;
             if(x>= 0 && x < r.right && y >= 0 && y < r.bottom)
             {
-                Clicked.invoke(this, null);
+                DoClick();
             }
         }
     }
@@ -77,7 +100,7 @@ class Button : Control
     {
         if(key == VK_SPACE)
         {
-            Clicked.invoke(this, null);
+            DoClick();
             return 0;
         }
         return 1;

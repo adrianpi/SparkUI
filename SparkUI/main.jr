@@ -1,15 +1,16 @@
 using jargon;
 
-// Minimal Win32 application in Jargon
-// This code creates a simple window and runs a message loop 
-// until the window is closed.
-
-// Constants for window styles and messages
 const int WS_OVERLAPPEDWINDOW = 0x00CF0000;
+const int WS_BORDER = 0x00800000;
+const int WS_DLGFRAME = 0x00400000;
+const int WS_CAPTION = WS_BORDER | WS_DLGFRAME;
 const int WS_CHILD = 0x40000000;
 const int WS_VISIBLE = 0x10000000;
 const int WS_POPUP = 0x80000000;
 const int WS_TABSTOP = 0x00010000;
+const int WS_SYSMENU = 0x00080000;
+
+const int WS_EX_DLGMODALFRAME = 0x00000001;
 
 const int CS_VREDRAW = 0x0001;
 const int CS_HREDRAW = 0x0002;
@@ -28,6 +29,7 @@ const int WM_PAINT = 0x000F;
 const int WM_ERASEBKG = 0x0014;
 const int WM_NCCREATE = 0x0081;
 const int WM_NCDESTROY = 0x0082;
+const int WM_NCPAINT = 0x0085;
 const int WM_MOUSEMOVE = 0x0200;
 const int WM_LBUTTONDOWN = 0x0201;
 const int WM_LBUTTONUP = 0x0202;
@@ -42,6 +44,10 @@ const int WM_ACTIVATE = 0x0006;
 const int WM_KEYDOWN = 0x0100;
 const int WM_KEYUP = 0x0101;
 const int WM_CHAR = 0x0102;
+const int WM_COMMAND = 0x0111;
+
+const int WM_UAHDRAWMENU = 0x0091;
+const int WM_UAHDRAWMENUITEM = 0x0092;
 
 const int WM_USER_KEY_PREVIEW = 0x0400; // WM_USER base
 
@@ -117,7 +123,35 @@ const int BI_BITFIELDS = 3;
 const int AC_SRC_OVER = 0x00;
 const int AC_SRC_ALPHA = 0x01;
 
-// Structures for window class and messages
+const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+
+const int OBJID_MENU = 0xFFFFFFFD;
+
+const int MIIM_STATE      = 0x00000001;
+const int MIIM_ID         = 0x00000002;
+const int MIIM_SUBMENU    = 0x00000004;
+const int MIIM_CHECKMARKS = 0x00000008;
+const int MIIM_TYPE       = 0x00000010;
+const int MIIM_DATA       = 0x00000020;
+const int MIIM_STRING     = 0x00000040;
+const int MIIM_BITMAP     = 0x00000080;
+const int MIIM_FTYPE      = 0x00000100;
+
+const int MF_STRING = 0x00000000;
+const int MF_SEPARATOR = 0x00000800;
+const int MF_POPUP = 0x00000010;
+
+const int ODS_SELECTED  = 0x0001;
+const int ODS_HOTLIGHT  = 0x0040;
+const int ODS_NOACCEL   = 0x0100;
+
+const int DT_CENTER     = 0x00000001;
+const int DT_VCENTER    = 0x00000004;
+const int DT_WORDBREAK  = 0x00000010;
+const int DT_SINGLELINE = 0x00000020;
+const int DT_CALCRECT   = 0x00000400;
+const int DT_HIDEPREFIX = 0x00100000;
+
 struct WNDCLASSA
 {
     uint    style;
@@ -304,10 +338,129 @@ int SetActiveWindow(long hWnd) external;
 int SetForegroundWindow(long hWnd) external;
 int DestroyWindow(long hWnd) external;
 byte* GetWindowTextA(long hWnd, byte* lpString, int nMaxCount) external;
+int DwmSetWindowAttribute(long hwnd, uint dwAttribute, void* pvAttribute, uint cbAttribute) external;
+long CreateMenu() external;
+long CreatePopupMenu() external;
+int AppendMenuA(long hMenu, uint uFlags, ulong uIDNewItem, byte* lpNewItem) external;
+long SetMenu(long hWnd, long hMenu) external;
+int DrawMenuBar(long hWnd) external;
+
 
 int MulDiv(int x, int y, int z)
 {
     return (int)(((long)x * (long)y) / (long)z);
+}
+
+class Stream
+{
+    void destructor()
+    {
+        Close();
+    }
+
+    virtual int Read(void* buffer, int size) { return 0; }
+    virtual int Write(void * buffer, int size) { return 0; }
+    virtual void Seek(int offset, int origin) { }
+    virtual int get Position() { return 0; }
+    virtual int get Length() { return 0; }
+    virtual void Close() {}
+}
+
+class FileStream : Stream
+{
+    file f;
+    int length;
+    FileStream constructor(file f)
+    {
+        base();
+        this.f = f;
+        f.seek(0, SeekPos.End);
+        length = f.position;
+        f.seek(0, SeekPos.Start);
+        return this;
+    }    
+
+    int Read(void* buffer, int size)
+    {
+        return f.read(buffer, size);
+    }
+
+    int Write(void* buffer, int size)
+    {
+        return f.write(buffer, size);
+    }
+
+    void Seek(int offset, int origin)
+    {
+        f.seek(offset, origin);
+    }
+
+    int get Position()
+    {
+        return f.position;
+    }
+
+    int get Length() => length;
+
+    void Close()
+    {
+        if(f != null)
+            f.close();
+        f = null;
+    }
+}
+
+class MemoryStream : Stream
+{
+    byte *buffer;
+    byte *ptr;
+    int capacity;
+
+    MemoryStream constructor(byte *buffer, int size)
+    {
+        base();
+        this.buffer = buffer;
+        this.ptr = buffer;
+        this.capacity = size;
+        return this;
+    }
+
+    int Read(void *buffer, int size)
+    {
+        int remaining = (int)(this.buffer + capacity - ptr);
+        if(size > remaining)
+            return 0;
+        memory.copy(buffer, ptr, size);
+        ptr += size;
+        return 1;
+    }
+
+    int Write(void *buffer, int size)
+    {
+        int remaining = (int)(this.buffer + capacity - ptr);
+        if(size > remaining)
+            return 0;
+        memory.copy(ptr, buffer, size);
+        ptr += size;
+        return 1;
+    }
+
+    void Seek(int offset, int origin)
+    {
+        if(origin == SeekPos.Start)
+            ptr = buffer + offset;
+        else if(origin == SeekPos.Current)
+            ptr += offset;
+        else if(origin == SeekPos.End)
+            ptr = buffer + capacity + offset;
+    }
+
+    int get Position()
+    {
+        return (int)(ptr - buffer);
+    }
+
+    int get Length() => capacity;
 }
 
 class Font
@@ -387,7 +540,7 @@ class Bitmap
         }
     }
 
-    static Bitmap FromSize(int width, int height, int bitsPerPixel)
+    static Bitmap FromSizeAndFormat(int width, int height, int bitsPerPixel)
     {
         if(bitsPerPixel != 24 && bitsPerPixel != 32)
         {
@@ -445,17 +598,23 @@ class Bitmap
             return null;
         }
 
+        Stream s = new FileStream(f);
+        return FromStream(s);
+    }
+
+    static Bitmap FromStream(Stream s)
+    {
         ushort bfType;
         uint bfSize;
         ushort bfReserved1;
         ushort bfReserved2;
         uint bfOffBits;
 
-        f.read(&bfType, sizeof(bfType));
-        f.read(&bfSize, sizeof(bfSize));
-        f.read(&bfReserved1, sizeof(bfReserved1));
-        f.read(&bfReserved2, sizeof(bfReserved2));
-        f.read(&bfOffBits, sizeof(bfOffBits));
+        s.Read(&bfType, sizeof(bfType));
+        s.Read(&bfSize, sizeof(bfSize));
+        s.Read(&bfReserved1, sizeof(bfReserved1));
+        s.Read(&bfReserved2, sizeof(bfReserved2));
+        s.Read(&bfOffBits, sizeof(bfOffBits));
 
         if(bfType != 0x4D42)
         {
@@ -465,7 +624,7 @@ class Bitmap
 
         // Read info header
         BITMAPINFOHEADER infoHeader = {};
-        if(f.read(&infoHeader, sizeof(infoHeader)) == 0)
+        if(s.Read(&infoHeader, sizeof(infoHeader)) == 0)
         {
             Log("Bitmap: Failed to read info header");
             return null;
@@ -521,11 +680,11 @@ class Bitmap
         uint skipBytes = bfOffBits - 54;
         if(skipBytes > 0)
         {
-            f.seek(skipBytes, SeekPos.Current);
+            s.Seek(skipBytes, SeekPos.Current);
         }
 
         // Read pixel data
-        if(f.read(tempBuffer, imageSize) == 0)
+        if(s.Read(tempBuffer, imageSize) == 0)
         {
             Log("Bitmap: Failed to read pixel data");
             memory.free(tempBuffer);
@@ -533,7 +692,7 @@ class Bitmap
             return null;
         }
 
-        f.close();
+        s.Close();
 
         // Copy and flip if bottom-up BMP
         byte* dest = (byte*)bitmap.pBits;
@@ -716,11 +875,35 @@ class Canvas
     }
 }
 
+resource Checkbox_Checked "resources/Checkbox_Checked.bmp";
+resource Checkbox_Unchecked "resources/Checkbox_Unchecked.bmp";
+resource Checkbox_Dim "resources/Checkbox_Dim.bmp";
+
+resource Radiobutton_Checked "resources/Radiobutton_Checked.bmp";
+resource Radiobutton_Unchecked "resources/Radiobutton_Unchecked.bmp";
+resource Radiobutton_Dim "resources/Radiobutton_Dim.bmp";
+
+resource Scroll_Up "resources/Scroll_Up.bmp";
+resource Scroll_Left "resources/Scroll_Left.bmp";
+resource Scroll_Down "resources/Scroll_Down.bmp";
+resource Scroll_Right "resources/Scroll_Right.bmp";
+
+resource Dropdown_Arrow "resources/Dropdown_Arrow.bmp";
+
+resource IconInfo "resources/info.bmp";
+resource IconQuestion "resources/question.bmp";
+resource IconError "resources/error.bmp";
+
+MemoryStream GetResourceStream(byte *res, int size)
+{
+    return new MemoryStream(res, size);
+}
+
 class WindowDefaults
 {
     static Font NormalTextFont = new Font(10, 400, false, false, "Tahoma");
-
-    static uint WindowBackColor = 0x111111;
+    
+    static uint WindowBackColor = 0x1f1f1f;
     static uint WindowForeColor = 0xffffff;
     static uint WindowForeColorDisabled = 0x808080;
 
@@ -732,27 +915,50 @@ class WindowDefaults
     static uint TextboxForeColor = 0xffffff;
     static Brush TextboxBackBrush = new Brush(WindowDefaults.TextboxBackColor);
 
-    static Bitmap CheckboxChecked = Bitmap.FromFile("Checkbox_Checked.bmp");
-    static Bitmap CheckboxUnchecked = Bitmap.FromFile("Checkbox_Unchecked.bmp");
-    static Bitmap CheckboxDim = Bitmap.FromFile("Checkbox_Dim.bmp");
+    static Bitmap CheckboxChecked = Bitmap.FromStream(GetResourceStream(Checkbox_Checked, sizeof(Checkbox_Checked)));
+    static Bitmap CheckboxUnchecked = Bitmap.FromStream(GetResourceStream(Checkbox_Unchecked, sizeof(Checkbox_Unchecked)));
+    static Bitmap CheckboxDim = Bitmap.FromStream(GetResourceStream(Checkbox_Dim, sizeof(Checkbox_Dim)));
 
-    static Bitmap RadiobuttonChecked = Bitmap.FromFile("Radiobutton_Checked.bmp");
-    static Bitmap RadiobuttonUnchecked = Bitmap.FromFile("Radiobutton_Unchecked.bmp");
-    static Bitmap RadiobuttonDim = Bitmap.FromFile("Radiobutton_Dim.bmp");
+    static Bitmap RadiobuttonChecked = Bitmap.FromStream(GetResourceStream(Radiobutton_Checked, sizeof(Radiobutton_Checked)));
+    static Bitmap RadiobuttonUnchecked = Bitmap.FromStream(GetResourceStream(Radiobutton_Unchecked, sizeof(Radiobutton_Unchecked)));
+    static Bitmap RadiobuttonDim = Bitmap.FromStream(GetResourceStream(Radiobutton_Dim, sizeof(Radiobutton_Dim)));
 
-    static Bitmap ScrollLeft = Bitmap.FromFile("Scroll_Left.bmp");
-    static Bitmap ScrollRight = Bitmap.FromFile("Scroll_Right.bmp");
-    static Bitmap ScrollUp = Bitmap.FromFile("Scroll_Up.bmp");
-    static Bitmap ScrollDown = Bitmap.FromFile("Scroll_Down.bmp");
+    static Brush MenuBackBrush = new Brush(0x1f1f1f);
 
-    static Bitmap DropdownArrow = Bitmap.FromFile("Dropdown_Arrow.bmp");
+    static Bitmap ScrollLeft = Bitmap.FromStream(GetResourceStream(Scroll_Left, sizeof(Scroll_Left)));
+    static Bitmap ScrollRight = Bitmap.FromStream(GetResourceStream(Scroll_Right, sizeof(Scroll_Right)));
+    static Bitmap ScrollUp = Bitmap.FromStream(GetResourceStream(Scroll_Up, sizeof(Scroll_Up)));
+    static Bitmap ScrollDown = Bitmap.FromStream(GetResourceStream(Scroll_Down, sizeof(Scroll_Down)));
+
+    static Bitmap DropdownArrow = Bitmap.FromStream(GetResourceStream(Dropdown_Arrow, sizeof(Dropdown_Arrow)));
+
+    static Bitmap InfoIcon = Bitmap.FromStream(GetResourceStream(IconInfo, sizeof(IconInfo)));
+    static Bitmap QuestionIcon = Bitmap.FromStream(GetResourceStream(IconQuestion, sizeof(IconQuestion)));
+    static Bitmap ErrorIcon = Bitmap.FromStream(GetResourceStream(IconError, sizeof(IconError)));
+}
+
+enum MsgFlags
+{
+    OK = 0,
+    OKCancel = 1,
+    YesNo = 2,
+    YesNoCancel = 3,
+
+    Info = 0x10,
+    Question = 0x20,
+    Error = 0x30,
 }
 
 class MessageBox
 {
-    static int Show(string text, string caption, int style)
+    static int Show(string text, string caption, MsgFlags style)
     {
-        return MessageBoxA(0, text.c_str(), caption.c_str(), style);
+        MsgDialog dlg = new MsgDialog();
+        dlg.Title = caption;
+        dlg.Message = text;
+        dlg.Flags = style;
+        
+        return dlg.ShowDialog(Window.activeWindow);
     }
 }
 
@@ -799,46 +1005,55 @@ Event operator+(Event e,  Delegate d)
     return e;
 }
 
-// Entry point for Windows applications
-int WinStart(long hInstance, long hPrevInstance, byte *pstrCommandLine, int nCmdShow)
+class Application
 {
-    Window window = new MyWindow();
-
-    window.Show(nCmdShow);
-
-    // Message loop
-    MSG msg = {};
-    while (GetMessageA(&msg, null, 0, 0))
+    static int Run()
     {
-        // Check if this is a keyboard message
-        if(msg.message == WM_KEYDOWN || msg.message == WM_KEYUP)
+        // Message loop
+        MSG msg = {};
+        while (GetMessageA(&msg, null, 0, 0))
         {
-            // Send key preview message to focused window
-            long focusedHwnd = GetFocus();
-            if(focusedHwnd != 0)
+            // Check if this is a keyboard message
+            if(msg.message == WM_KEYDOWN || msg.message == WM_KEYUP)
             {
-                long result = SendMessageA(focusedHwnd, WM_USER_KEY_PREVIEW, msg.wParam, msg.lParam);
-                if(result == 1)
+                // Send key preview message to focused window
+                long focusedHwnd = GetFocus();
+                if(focusedHwnd != 0)
                 {
-                    // Key preview handled it, skip normal processing and just dispatch
-                    DispatchMessageA(&msg);
-                    continue;
+                    long result = SendMessageA(focusedHwnd, WM_USER_KEY_PREVIEW, msg.wParam, msg.lParam);
+                    if(result == 1)
+                    {
+                        // Key preview handled it, skip normal processing and just dispatch
+                        DispatchMessageA(&msg);
+                        continue;
+                    }
                 }
+            }
+
+            // Skip IsDialogMessage for ENTER and ESC to allow OnKeyDown to handle them
+            bool isEnterOrEsc = (msg.message == WM_KEYDOWN && 
+                                 (msg.wParam == VK_RETURN || msg.wParam == VK_ESCAPE));
+
+            if(isEnterOrEsc || Window.activeWindow == null || !IsDialogMessage(Window.activeWindow.hWnd, &msg))
+            {
+                // Don't call TranslateMessage for ENTER/ESC to prevent WM_CHAR beep
+                if(!isEnterOrEsc)
+                    TranslateMessage(&msg);
+                DispatchMessageA(&msg);
             }
         }
 
-        // Skip IsDialogMessage for ENTER and ESC to allow OnKeyDown to handle them
-        bool isEnterOrEsc = (msg.message == WM_KEYDOWN && 
-                             (msg.wParam == VK_RETURN || msg.wParam == VK_ESCAPE));
-
-        if(isEnterOrEsc || Window.activeWindow == null || !IsDialogMessage(Window.activeWindow.hWnd, &msg))
-        {
-            // Don't call TranslateMessage for ENTER/ESC to prevent WM_CHAR beep
-            if(!isEnterOrEsc)
-                TranslateMessage(&msg);
-            DispatchMessageA(&msg);
-        }
+        return msg.wParam;
     }
 
-    return 0;
+    static void Exit(int exitCode)
+    {
+        PostQuitMessage(exitCode);
+    }
+}
+
+
+int DllStart(long hModule, int dwReason, void *pReserved)
+{
+	return 1;
 }

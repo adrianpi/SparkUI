@@ -1,4 +1,7 @@
 using jargon;
+using SparkUI;
+
+resource sparkUI32 "SPARKUI32.BMP";
 
 class MyWindow : Window
 {
@@ -54,7 +57,7 @@ class MyWindow : Window
             }
         }*/
 
-        testBitmap2 = Bitmap.FromFile("sparkUI32.bmp");
+        testBitmap2 = Bitmap.FromStream(GetResourceStream(sparkUI32, sizeof(sparkUI32)));
 
         label1 = new Label(this, 10, 10, 200, 30);
         label1.Text = "Label1";
@@ -128,8 +131,82 @@ class MyWindow : Window
         picturebox.Image = testBitmap2;
 
         textbox = new Textbox(this, 240, 10, 150, 20);
+        textbox.Text = "Textbox1";
         textbox2 = new Textbox(this, 240, 40, 150, 20);
+        textbox2.Text = "Textbox2";
 
+        Menu menu = new Menu();
+        PopupMenu fileMenu = new PopupMenu();
+        PopupMenu editMenu = new PopupMenu();
+
+        MenuItem open = new MenuItem("&Open", null);
+        open.Clicked += new Delegate(this, MyWindow.Open_Clicked);
+
+        MenuItem save = new MenuItem("&Save", null);
+        save.Clicked += new Delegate(this, MyWindow.Save_Clicked);
+
+        MenuItem exit = new MenuItem("E&xit", null);
+        exit.Clicked += new Delegate(this, MyWindow.Exit_Clicked);
+
+        fileMenu.AddItem(open);
+        fileMenu.AddItem(save);
+        fileMenu.AddItem(new MenuItem("-", null));
+        fileMenu.AddItem(exit);
+
+        editMenu.AddItem(new MenuItem("Undo", null));
+        editMenu.AddItem(new MenuItem("Redo", null));
+        editMenu.AddItem(new MenuItem("-", null));
+        editMenu.AddItem(new MenuItem("Cut", null));
+        editMenu.AddItem(new MenuItem("Copy", null));
+        editMenu.AddItem(new MenuItem("Paste", null));
+
+        menu.AddItem(new MenuItem("File", fileMenu));
+        menu.AddItem(new MenuItem("Edit", editMenu));
+
+        this.Menu = menu;
+    }
+
+    void Open_Clicked(object sender, void *args)
+    {
+        OpenFileDialog ofd = new OpenFileDialog();
+        ofd.FileName = "*.txt";
+        ofd.Filter = "All Files|*.*|Text Files|*.txt";
+        ofd.Title = "Open a text file";
+        if(ofd.Show(this))
+        {
+            MessageBox.Show(ofd.FileName, "Selected file", 0);
+        }
+        else
+        {
+            MessageBox.Show("Open cancelled", "Info", 0);
+        }
+    }
+
+    void Save_Clicked(object sender, void *args)
+    {
+        SaveFileDialog sfd = new SaveFileDialog();
+        sfd.FileName = "Untitled.txt";
+        sfd.Filter = "All Files|*.*|Text Files|*.txt";
+        sfd.Title = "Save a text file";
+        sfd.DefaultExtension = "txt";
+        if(sfd.Show(this))
+        {
+            MessageBox.Show(sfd.FileName, "Save to file", 0);
+        }
+        else
+        {
+            MessageBox.Show("Save cancelled", "Info", 0);
+        }
+    }
+
+    void Exit_Clicked(object sender, void *args)
+    {
+        if(MessageBox.Show("Are you sure you want to exit?", "SparkUI", MsgFlags.Question | MsgFlags.YesNo) == 1)
+        {
+            //PostQuitMessage(99);
+            //Close();
+            Application.Exit(99);
+        }
     }
 
     void Button1_Clicked(object sender, void* args)
@@ -155,22 +232,12 @@ class MyWindow : Window
 
     void OnDestroy()
     {
-        PostQuitMessage(0);
+        //PostQuitMessage(0);
+        Application.Exit(0);
     }
 
     void OnPaint(Canvas canvas)
     {
-        /*canvas.FillRectangle(200, 100, 200, 30, brush);
-        canvas.DrawRectangle(200, 100, 200, 30, pen);
-        canvas.DrawText(201, 101, "Hello world!", font, 0x00ffff);
-
-        // Draw the bitmap at original size
-        canvas.DrawBitmap(400, 150, testBitmap.Width, testBitmap.Height, testBitmap);
-
-        // Draw the bitmap stretched to a different size
-        canvas.DrawBitmap(220, 250, 200, 150, testBitmap);
-            
-        canvas.DrawBitmap(30, 30, 320, 240, testBitmap2);*/
     }
 
     void OnMouseMove(int x, int y)
@@ -241,4 +308,15 @@ class MyWindow : Window
         int newItemIndex = listbox.Items.Count + 1;
         listbox.Items.Add(string.format("New Item %d", newItemIndex));
     }
+}
+
+int WinStart(long hInstance, long hPrevInstance, byte *pstrCommandLine, int nCmdShow)
+{
+    Window window = new MyWindow();
+    window.width = 720;
+    window.height = 480;
+
+    window.Show(nCmdShow);
+
+    return Application.Run();    
 }

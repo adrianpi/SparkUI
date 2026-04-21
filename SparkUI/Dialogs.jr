@@ -1,0 +1,147 @@
+using jargon;
+
+struct OPENFILENAMEA
+{
+    uint lStructSize;
+    long hwndOwner;
+    long hInstance;
+    byte* lpstrFilter;
+    byte* lpstrCustomFilter;
+    uint nMaxCustFilter;
+    uint nFilterIndex;
+    byte* lpstrFile;
+    uint nMaxFile;
+    byte* lpstrFileTitle;
+    uint nMaxFileTitle;
+    byte* lpstrInitialDir;
+    byte* lpstrTitle;
+    uint Flags;
+    short nFileOffset;
+    short nFileExtension;
+    byte* lpstrDefExt;
+    long lCustData;
+    void* lpfnHook;
+    byte* lpTemplateName;
+}
+
+const int OFN_FILEMUSTEXIST = 0x00001000;
+const int OFN_PATHMUSTEXIST = 0x00000800;
+const int OFN_OVERWRITEPROMPT = 0x00000002;
+
+int GetOpenFileNameA(OPENFILENAMEA* ofn) external;
+int GetSaveFileNameA(OPENFILENAMEA* ofn) external;
+
+class OpenFileDialog
+{
+    OPENFILENAMEA ofn;
+    byte fileName[260];
+    string filter = "All Files|*.*|";
+    string title = "Open File";
+
+    string get Filter() => filter;
+    void set Filter(string value) => filter = value;
+
+    string get Title() => title;
+    void set Title(string value) => title = value;
+
+    string get FileName() => new string(&fileName[0]);
+    void set FileName(string value)
+    {
+        int len = value.length;
+        if(len >= 260)
+            len = 259;
+        memory.put(&fileName[0], 0, 260);
+        memory.copy(&fileName[0], value.str, len);
+    }
+
+    OpenFileDialog constructor()
+    {
+        base();
+        memory.put(&fileName[0], 0, 260);
+        memory.put(&ofn, 0, sizeof(ofn));
+        ofn.lStructSize = sizeof(ofn);
+
+        ofn.lpstrFilter = filter.c_str();
+        ofn.lpstrFile = &fileName[0];
+        ofn.nMaxFile = 260;
+        ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+
+        return this;
+    }
+
+    bool Show(Window owner)
+    {
+        ofn.hwndOwner = owner ? owner.hWnd : null;
+        string flt = new string(filter.c_str());
+        byte *ptr = flt.c_str();
+        while(*ptr)		{
+            if(*ptr == '|')
+                *ptr = 0;
+            ptr++;
+        }
+        ofn.lpstrFilter = flt.c_str();
+        ofn.lpstrTitle = title.c_str();
+        int ok = GetOpenFileNameA(&ofn);
+        return ok != 0;
+    }
+}
+
+class SaveFileDialog
+{
+    OPENFILENAMEA ofn;
+    byte fileName[260];
+    string filter = "All Files|*.*|";
+    string title = "Save File";
+    string defaultExtension = "txt";
+
+    string get Filter() => filter;
+    void set Filter(string value) => filter = value;
+
+    string get DefaultExtension() => defaultExtension;
+    void set DefaultExtension(string value) => defaultExtension = value;
+
+    string get Title() => title;
+    void set Title(string value) => title = value;
+
+    string get FileName() => new string(&fileName[0]);
+    void set FileName(string value)
+    {
+        int len = value.length;
+        if(len >= 260)
+            len = 259;
+        memory.put(&fileName[0], 0, 260);
+        memory.copy(&fileName[0], value.str, len);
+    }
+
+    SaveFileDialog constructor()
+    {
+        base();
+        memory.put(&fileName[0], 0, 260);
+        memory.put(&ofn, 0, sizeof(ofn));
+        ofn.lStructSize = sizeof(ofn);
+
+        ofn.lpstrFilter = filter.c_str();
+        ofn.lpstrFile = &fileName[0];
+        ofn.nMaxFile = 260;
+        ofn.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
+
+        return this;
+    }
+
+    bool Show(Window owner)
+    {
+        ofn.hwndOwner = owner ? owner.hWnd : null;
+        string flt = new string(filter.c_str());
+        byte *ptr = flt.c_str();
+        while(*ptr)		{
+            if(*ptr == '|')
+                *ptr = 0;
+            ptr++;
+        }
+        ofn.lpstrFilter = flt.c_str();
+        ofn.lpstrTitle = title.c_str();
+        ofn.lpstrDefExt = defaultExtension.c_str();
+        int ok = GetSaveFileNameA(&ofn);
+        return ok != 0;
+    }
+}
