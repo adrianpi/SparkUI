@@ -4,5 +4,6 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="SparkUI/SparkUI.vcxproj" Id="e504d0f5-7db9-4c85-8abb-b3e5ca297b77" />
+  <Project Path="SparkUIDemo/SparkUIDemo.vcxproj" Id="72a993b3-2608-45db-8621-6d226d3a5a68" />
   <Project Path="WindowsProject1/WindowsProject1.vcxproj" Id="d1ddc3ae-9dda-4b5f-a374-aed998e534d6" />
 </Solution>
