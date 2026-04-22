@@ -402,10 +402,12 @@ class Window
 
     void Close()
     {
+        OnClose();
         DestroyWindow(hWnd);
     }
 
     virtual void OnCreate() {}
+    virtual void OnClose() {}
     virtual void OnDestroy() {}
     virtual void OnTextChanged() {}
 
@@ -724,6 +726,12 @@ class Dialog : Window
         }
     }
 
+    void OnClose()
+    {
+        base();
+        EnableWindow(parent.hWnd, true);
+    }
+
     int ShowDialog(Window owner)
     {
         MSG msg;
@@ -755,14 +763,14 @@ class Dialog : Window
                 done = true;
         }
 
-        if(owner != null)
+        /*if(owner != null)
         {
             // Re-enable the owner
             EnableWindow(owner.hWnd, true);
             SetForegroundWindow(owner.hWnd);
             SetActiveWindow(owner.hWnd);
             SetFocus(owner.hWnd);
-         }
+        }*/
 
         return ModalResult;
     }    

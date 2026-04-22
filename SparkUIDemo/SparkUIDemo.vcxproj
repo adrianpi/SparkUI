@@ -108,7 +108,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>jlc2.exe -g -k MyWindow.jr -o $(OutputPath)$(TargetFileName) -lSparkUI.lib -ladvapi32.lib -lole32.lib -loleaut32.lib -lkernel32.lib -luser32.lib -lgdi32.lib -lMsimg32.lib -ldwmapi.lib -luxtheme.lib -lComdlg32.lib -Ie:\2026\SparkUI\x64\Debug -SUBSYSTEM:WINDOWS</Command>
+      <Command>jlc2.exe -g -k MyWindow.jr -o $(OutputPath)$(TargetFileName) -lSparkUI.lib -ladvapi32.lib -lole32.lib -loleaut32.lib -lkernel32.lib -luser32.lib -lgdi32.lib -lMsimg32.lib -ldwmapi.lib -luxtheme.lib -lComdlg32.lib -Ic:\2026\SparkUI\x64\Debug -SUBSYSTEM:WINDOWS</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
