@@ -145,3 +145,182 @@ class SaveFileDialog
         return ok != 0;
     }
 }
+
+class ChooseColorDialog
+{
+    uint selectedColor = 0x000000; // Default to black
+    uint* customColors = null;
+    bool fullOpen = false;
+    bool showHelp = false;
+    bool solidColorOnly = false;
+    bool anyColor = true;
+    bool preventFullOpen = false;
+
+    static long CenterColorDlgProc(long hdlg, uint uiMsg, ulong wParam, ulong lParam) 
+    {
+        if (uiMsg == WM_INITDIALOG)
+        {
+            RECT rcDlg, rcParent;
+            int dlgWidth, dlgHeight, x, y;
+
+            // Get dialog dimensions
+            GetWindowRect(hdlg, &rcDlg);
+            dlgWidth = rcDlg.right - rcDlg.left;
+            dlgHeight = rcDlg.bottom - rcDlg.top;
+
+            // Get screen dimensions
+            rcParent.left = 0;
+            rcParent.top = 0;
+            rcParent.right = GetSystemMetrics(SM_CXSCREEN);
+            rcParent.bottom = GetSystemMetrics(SM_CYSCREEN);
+
+            // Calculate centered position
+            x = (rcParent.right - dlgWidth) / 2;
+            y = (rcParent.bottom - dlgHeight) / 2;
+
+            // Move dialog to center
+            SetWindowPos(hdlg, 0, x, y, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+
+            return 1; // Let default processing continue
+        }
+        return 0;
+    }
+
+
+    ChooseColorDialog constructor()
+    {
+        base();
+        // Allocate space for 16 custom colors (Windows standard)
+        customColors = (uint*)memory.alloc(16 * sizeof(uint));
+
+        // Initialize custom colors to white
+        for(int i = 0; i < 16; i++)
+        {
+            customColors[i] = 0x00FFFFFF;
+        }
+
+        return this;
+    }
+
+    void destructor()
+    {
+        if(customColors != null)
+        {
+            memory.free(customColors);
+            customColors = null;
+        }
+        base();
+    }
+
+    // Get/Set selected color
+    uint get Color() => selectedColor;
+    void set Color(uint value)
+    {
+        selectedColor = value;
+    }
+
+    // Get/Set whether to show the full color picker initially
+    bool get FullOpen() => fullOpen;
+    void set FullOpen(bool value)
+    {
+        fullOpen = value;
+    }
+
+    // Get/Set whether to show help button
+    bool get ShowHelp() => showHelp;
+    void set ShowHelp(bool value)
+    {
+        showHelp = value;
+    }
+
+    // Get/Set whether to restrict to solid colors only
+    bool get SolidColorOnly() => solidColorOnly;
+    void set SolidColorOnly(bool value)
+    {
+        solidColorOnly = value;
+    }
+
+    // Get/Set whether to allow any color
+    bool get AnyColor() => anyColor;
+    void set AnyColor(bool value)
+    {
+        anyColor = value;
+    }
+
+    // Get/Set whether to prevent opening the full color picker
+    bool get PreventFullOpen() => preventFullOpen;
+    void set PreventFullOpen(bool value)
+    {
+        preventFullOpen = value;
+    }
+
+    // Get a custom color by index (0-15)
+    uint GetCustomColor(int index)
+    {
+        if(index >= 0 && index < 16 && customColors != null)
+        {
+            return customColors[index];
+        }
+        return 0x00FFFFFF;
+    }
+
+    // Set a custom color by index (0-15)
+    void SetCustomColor(int index, uint color)
+    {
+        if(index >= 0 && index < 16 && customColors != null)
+        {
+            customColors[index] = color;
+        }
+    }
+
+    // Show the color picker dialog
+    // Returns true if user clicked OK, false if cancelled
+    bool ShowDialog(Window owner)
+    {
+        CHOOSECOLORA cc = {};
+        cc.lStructSize = sizeof(CHOOSECOLORA);
+        cc.hwndOwner = owner != null ? owner.hWnd : 0;
+        cc.hInstance = 0;//g_hInstance;
+        cc.rgbResult = selectedColor;
+        cc.lpCustColors = customColors;
+        cc.lpfnHook = &ChooseColorDialog.CenterColorDlgProc;
+
+        // Build flags
+        uint flags = CC_RGBINIT; // Always use rgbResult as initial color
+
+        if(fullOpen)
+            flags = flags | CC_FULLOPEN;
+
+        if(showHelp)
+            flags = flags | CC_SHOWHELP;
+
+        if(solidColorOnly)
+            flags = flags | CC_SOLIDCOLOR;
+
+        if(anyColor)
+            flags = flags | CC_ANYCOLOR;
+
+        if(preventFullOpen)
+            flags = flags | CC_PREVENTFULLOPEN;
+
+        flags = flags | CC_ENABLEHOOK;
+
+        cc.Flags = flags;
+        cc.lCustData = 0;
+        //cc.lpfnHook = null;
+        cc.lpTemplateName = null;
+
+        // Show the dialog
+        int result = ChooseColorA(&cc);
+
+        if(result != 0)
+        {
+            // User clicked OK
+            selectedColor = cc.rgbResult;
+            return true;
+        }
+
+        // User cancelled
+        return false;
+    }
+}
