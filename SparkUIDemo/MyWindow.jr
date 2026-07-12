@@ -82,7 +82,7 @@ class TestClass
     Bitmap get BitMap() => bitmap;
     void set BitMap(Bitmap value) => bitmap = value;
     [PropertyEditor("FilenamePropertyEditor")]
-    [FilenameFilter("Jargon Files|*.jr")]
+    [FilenameFilter("Jargon Files|*.jr|")]
     string get FileName() => fileName;
     void set FileName(string value) => fileName = value;
     //[PropertyEditor("PointPropertyEditor")] 
