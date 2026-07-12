@@ -914,6 +914,12 @@ class PropertyGrid : Control
     object get SelectedObject() => selectedObject;
     void set SelectedObject(object value)
     {
+        if(editor)
+        {
+            editor.CancelEdit(this, selectedProperty.target, selectedProperty.prop);
+            editor = null;
+        }
+        selectedProperty = null;
         selectedObject = value;
         GetObjectProperties(properties, selectedObject);
         topIndex = 0;
