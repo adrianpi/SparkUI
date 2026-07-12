@@ -5,6 +5,7 @@ class VScrollbar : Scrollbar
     VScrollbar constructor(Window parent, int x, int y, int width, int height)
     {
         base(parent, x, y, width, height);
+        doubleBuffered = true;
         GetHandle();
         return this;
     }
@@ -48,12 +49,16 @@ class VScrollbar : Scrollbar
         }
     }
 
+    int offs;
+
     void OnMouseDown(int button, int x, int y)
     {
         if(button == 1)
         {
             int trackHeight = height - 32;
             int contentSize = MaxValue + PageSize;
+            if(contentSize == 0 || MaxValue == 0)
+                return;
             int thumbHeight = (PageSize * trackHeight) / contentSize;
             if(thumbHeight < 20) thumbHeight = 20;
             if(thumbHeight > trackHeight) thumbHeight = trackHeight;
@@ -86,6 +91,7 @@ class VScrollbar : Scrollbar
             {
                 // Clicked on thumb, do nothing (could implement dragging here)
                 scrolling = true;
+                offs = y - thumbY;
                 SetCapture(hWnd);
             }
             else if(y < height-16)
@@ -133,11 +139,15 @@ class VScrollbar : Scrollbar
             
             if(availableSpace > 0)
             {
-                position = ((y - 16) * MaxValue) / availableSpace;
-                if(position < 0) position = 0;
-                else if(position > MaxValue) position = MaxValue;
-                Invalidate();
-                Scrolled.invoke(this, null);
+                int pos = ((y - offs - 16) * MaxValue) / availableSpace;
+                if(pos < 0) pos = 0;
+                else if(pos > MaxValue) pos = MaxValue;
+                if(pos != position)
+                {
+                    position = pos;
+                    Invalidate();
+                    Scrolled.invoke(this, null);
+                }
             }
         }
     }

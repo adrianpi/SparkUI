@@ -48,12 +48,16 @@ class HScrollbar : Scrollbar
         }
     }
 
+    int offs;
+
     void OnMouseDown(int button, int x, int y)
     {
         if(button == 1)
         {
             int trackWidth = width - 32;
             int contentSize = MaxValue + PageSize;
+            if(contentSize == 0 || MaxValue == 0)
+                return;
             int thumbWidth = (PageSize * trackWidth) / contentSize;
             if(thumbWidth < 16) thumbWidth = 16;
             if(thumbWidth > trackWidth) thumbWidth = trackWidth;
@@ -86,6 +90,7 @@ class HScrollbar : Scrollbar
             {
                 // Clicked on thumb, do nothing (could implement dragging here)
                 scrolling = true;
+                offs = x - thumbX;
                 SetCapture(hWnd);
             }
             else if(x < width-16)
@@ -133,7 +138,7 @@ class HScrollbar : Scrollbar
             
             if(availableSpace > 0)
             {
-                position = ((x - 16) * MaxValue) / availableSpace;
+                position = ((x - offs - 16) * MaxValue) / availableSpace;
                 if(position < 0) position = 0;
                 else if(position > MaxValue) position = MaxValue;
                 Invalidate();
