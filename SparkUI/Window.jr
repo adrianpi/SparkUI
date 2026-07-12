@@ -222,7 +222,7 @@ class Window
     weak Window parent = null;
     array<Window> children = new array<Window>();
     string className;
-    string text = "Window";
+    string text;
     RECT clientRect;
     uint backColor = WindowDefaults.WindowBackColor;
     uint foreColor = WindowDefaults.WindowForeColor;
@@ -237,10 +237,13 @@ class Window
     static Window hoverWindow = null;
     static Window activeWindow = null;
     Menu menu;
+    bool doubleBuffered = false;
+    Event Resize = new Event();
 
     Window constructor()
     {
         base();
+        text = getClassName();
         backBrush = new Brush(backColor);
         return this;
     }
@@ -248,6 +251,11 @@ class Window
     void destructor()
     {
         Log("Destroying %s window %p", getClassName(), this);
+        if(memDC)
+        {
+            SelectObject(memDC, oldBmp);
+            DeleteDC(memDC);
+        }
         base();
     }
 
@@ -316,6 +324,7 @@ class Window
         return clientRect;
     }
 
+    [PropertyEditor("ColorPropertyEditor")]
     uint get ForeColor() => foreColor;
     void set ForeColor(uint value)
     {
@@ -323,6 +332,7 @@ class Window
         Invalidate();
     }
 
+    [PropertyEditor("ColorPropertyEditor")]
     uint get BackColor() => backColor;
     void set BackColor(uint value)
     {
@@ -356,16 +366,20 @@ class Window
         }
     }
 
+    virtual void OnVisibleChanged() {}
+
     bool get Visible() => visible;
     void set Visible(bool value)
     {
         visible = value;
+        OnVisibleChanged();
         if(visible)
             ShowWindow(hWnd, SW_SHOW);
         else
             ShowWindow(hWnd, SW_HIDE);
     }
 
+    [Browsable(false)]
     Menu get Menu() => menu;
     void set Menu(Menu value)
     {
@@ -373,6 +387,30 @@ class Window
         SetMenu(hWnd, menu != null ? menu.hMenu : 0);
         Invalidate();
         DrawMenuBar(hWnd);
+    }
+
+    int get Left() => x;
+    void set Left(int value)
+    {
+        SetPosition(value, y);
+    }
+
+    int get Top() => y;
+    void set Top(int value)
+    {
+        SetPosition(x, value);
+    }
+
+    int get Width() => width;
+    void set Width(int value)
+    {
+        SetSize(value, height);
+    }
+
+    int get Height() => height;
+    void set Height(int value)
+    {
+        SetSize(width, value);
     }
 
     void SetPosition(int x, int y)
@@ -410,6 +448,8 @@ class Window
     virtual void OnClose() {}
     virtual void OnDestroy() {}
     virtual void OnTextChanged() {}
+
+    virtual void OnSizeChanged() {}
 
     virtual void OnPaintBackground(Canvas canvas) 
     {
@@ -453,6 +493,11 @@ class Window
         }
     }
 
+    Bitmap memBmp = null;
+    Canvas gfx = null;
+    long memDC = 0;
+    long oldBmp = 0;
+
     virtual long WndProc(long hwnd, uint uMsg, ulong wParam, ulong lParam)
     {
         if(uMsg == WM_CREATE)
@@ -484,16 +529,53 @@ class Window
         }
         else if(uMsg == WM_ERASEBKG)
         {
-            Canvas canvas = new Canvas(wParam);
-            OnPaintBackground(canvas);
+            if(!doubleBuffered)
+            {
+                Canvas canvas = new Canvas(wParam);
+                OnPaintBackground(canvas);
+            }
             return 1; // Prevent flickering by not erasing background
+        }
+        else if(uMsg == WM_SIZE)
+        {
+            width = (int)(short)(lParam & 0xFFFF);
+            height = (int)(short)((lParam >> 16) & 0xFFFF);
+            OnSizeChanged();
+            Resize.invoke(this, null);
+            Invalidate();
         }
         else if(uMsg == WM_PAINT)
         {
             PAINTSTRUCT ps = {};
             long hdc = BeginPaint(hwnd, &ps);
             Canvas canvas = new Canvas(hdc);
-            OnPaint(canvas);
+            Canvas paintCanvas = canvas;
+
+            if(doubleBuffered)
+            {
+                if(memBmp == null || memBmp.width != width || memBmp.height != height)
+                {
+                    if(memDC)
+                    {
+                        SelectObject(memDC, oldBmp);
+                        DeleteDC(memDC);
+                    }
+                    memBmp = Bitmap.FromSizeAndFormat(width, height, 24);
+                    memDC = CreateCompatibleDC(canvas.hdc);
+                    oldBmp = SelectObject(memDC, memBmp.hBitmap);
+                    gfx = new Canvas(memDC);
+                }
+                paintCanvas = gfx;
+                OnPaintBackground(paintCanvas);
+            }
+
+            OnPaint(paintCanvas);
+
+            if(doubleBuffered)
+            {
+                BitBlt(canvas.hdc, 0, 0, width, height, gfx.hdc, 0, 0, SRCCOPY);
+            }
+
             EndPaint(hwnd, &ps);
             return 0;
         }
