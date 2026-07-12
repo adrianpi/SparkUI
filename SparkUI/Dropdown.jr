@@ -12,6 +12,11 @@ class Dropdown : Control
         return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
     }
 
+    object get SelectedItem()
+    {
+        return listbox.SelectedItem;
+    }
+
     Dropdown constructor(Window parent, int x, int y, int width, int height)
     {
         base(parent, x, y, width, height);        
@@ -48,6 +53,25 @@ class Dropdown : Control
                 ClientToScreen(parent.hWnd, &pt);
                 popup.SetPosition(pt.x, pt.y);
                 popup.Visible = true;
+                int width = listbox.width;
+                long dc = GetDC(hWnd);
+                Canvas cv = new Canvas(dc);
+                for(int i = 0; i < Items.Count; i++)
+                {
+                    SIZE ts = cv.MeasureText(Items.items[i].toString(), listbox.Font);
+                    if(ts.cx + 20 > width)
+                        width = ts.cx + 20;
+                }
+                ReleaseDC(hWnd, dc);
+                listbox.SetSize(width, listbox.height);
+                popup.SetSize(width, popup.height);
+                if(Items.Count * 20 + 2 < 162)
+                {
+                    listbox.Items.topIndex = 0;
+                    listbox.vscroll.Position = 0;
+                    listbox.SetSize(listbox.width, Items.Count * 20+2);
+                    popup.SetSize(popup.width, Items.Count * 20 + 2);
+                }
                 EnableWindow(popup.hWnd, true);
                 listbox.Focus();
             }
@@ -57,6 +81,15 @@ class Dropdown : Control
                 EnableWindow(popup.hWnd, false);
                 Focus();
             }
+        }
+    }
+
+    void OnVisibleChanged()
+    {
+        if(!Visible)
+        {
+            popup.Visible = false;
+            EnableWindow(popup.hWnd, false);
         }
     }
 
