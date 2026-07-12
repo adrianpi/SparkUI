@@ -23,6 +23,17 @@ class Textbox : Control
         return this;
     }
 
+    void destructor()
+    {
+        // Restore the original window procedure when the Textbox is destroyed
+        if(originalWndProc != 0)
+        {
+            SetWindowLongPtrA(hWnd, GWLP_WNDPROC, originalWndProc);
+            originalWndProc = 0;
+        }
+        base();
+    }
+
     string GetWindowClassName()
     {
         return "EDIT";
@@ -36,6 +47,12 @@ class Textbox : Control
     void RegisterClass()
     {
         className = GetWindowClassName();
+    }
+
+    void OnEnter()
+    {
+        base();
+        SendMessageA(hWnd, 177/*EM_SETSEL*/, 0, -1); // Select all text when entering the textbox
     }
 
     void OnLeave()
@@ -59,8 +76,12 @@ class Textbox : Control
 
         if(textbox != null)
         {
+            if(uMsg == WM_SETFOCUS)
+            {
+                textbox.OnEnter();
+            }
             // Handle WM_KILLFOCUS to call OnLeave
-            if(uMsg == WM_KILLFOCUS)
+            else if(uMsg == WM_KILLFOCUS)
             {
                 textbox.OnLeave();
             }
