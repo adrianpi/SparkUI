@@ -7,7 +7,8 @@ class ListItems : Control
 
     ListItems constructor(Window parent, int x, int y, int width, int height)
     {
-        base(parent, x, y, width, height);        
+        base(parent, x, y, width, height);    
+        doubleBuffered = true;
         GetHandle();
         BackColor = 0x333333;
         return this;
@@ -45,6 +46,18 @@ class ListItems : Control
             listbox.vscroll.Invalidate();
             listbox.SelectedIndexChanged.invoke(listbox, null);
         }
+    }
+
+    void Clear()
+    {
+        items.clear();
+        Listbox listbox = (Listbox)parent;
+        listbox.selectedIndex = -1;
+        topIndex = 0;
+        listbox.vscroll.MaxValue = 0;
+        listbox.vscroll.Position = 0;
+        Invalidate();
+        listbox.vscroll.Invalidate();
     }
 
     object get_item(int index) => items[index];
