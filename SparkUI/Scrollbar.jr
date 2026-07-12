@@ -2,8 +2,8 @@ using jargon;
 
 class Scrollbar : Control
 {
-    int MaxValue = 100;
-    int PageSize = 10;
+    int maxValue = 100;
+    int pageSize = 10;
     int position = 0;
     bool scrolling = false;
     bool arrowsVisible = false;
@@ -15,7 +15,21 @@ class Scrollbar : Control
     {
         position = value;
         if(position < 0) position = 0;
-        else if(position > MaxValue) position = MaxValue;
+        else if(position > maxValue) position = maxValue;
+        Invalidate();
+    }
+
+    int get MaxValue() => maxValue;
+    void set MaxValue(int value)
+    {
+        maxValue = value;
+        Invalidate();
+    }
+
+    int get PageSize() => pageSize;
+    void set PageSize(int value)
+    {
+        pageSize = value;
         Invalidate();
     }
 
