@@ -1,0 +1,1225 @@
+using jargon;
+
+int strtol(byte *str, byte **endptr, int _base) external;
+uint strtoul(byte *str, byte **endptr, int _base) external;
+long strtoll(byte *str, byte **endptr, int _base) external;
+ulong strtoull(byte *str, byte **endptr, int _base) external;
+float strtof(byte *str, byte **endptr) external;
+double strtod(byte *str, byte **endptr) external;
+
+bool parse_byte(byte *str, byte *out)
+{
+    byte *end;
+    int value = strtol(str, &end, 10);
+    if (end == str)
+        return false;
+    if (*end != '\0')
+        return false;
+    if (value < -128 || value > 127)
+        return false;
+    *out = (byte)value;
+    return true;
+}
+
+bool parse_ubyte(byte *str, ubyte *out)
+{
+    byte *end;
+    uint value = strtoul(str, &end, 10);
+    if (end == str)
+        return false;
+    if (*end != '\0')
+        return false;
+    if (value > 255)
+        return false;
+    *out = (ubyte)value;
+    return true;
+}
+
+bool parse_short(byte *str, short *out)
+{
+    byte *end;
+    int value = strtol(str, &end, 10);
+    if (end == str)
+        return false;
+    if (*end != '\0')
+        return false;
+    if (value < -32768 || value > 32767)
+        return false;
+    *out = (short)value;
+    return true;
+}
+
+bool parse_ushort(byte *str, ushort *out)
+{
+    byte *end;
+    uint value = strtoul(str, &end, 10);
+    if (end == str)
+        return false;
+    if (*end != '\0')
+        return false;
+    if (value > 65535)
+        return false;
+    *out = (ushort)value;
+    return true;
+}
+
+bool parse_int(byte *str, int *out)
+{
+    byte *end;
+
+    int value = strtol(str, &end, 10);
+
+    if (end == str)
+        return false;
+
+    if (*end != '\0')
+        return false;
+
+    if (value < -2147483648 || value > 2147483647)
+        return false;
+
+    *out = (int)value;
+    return true;
+}
+
+bool parse_uint(byte *str, uint *out)
+{
+    byte *end;
+
+    uint value = strtoul(str, &end, 10);
+
+    if (end == str)
+        return false;
+
+    if (*end != '\0')
+        return false;
+
+    if (value > 4294967295)
+        return false;
+
+    *out = (uint)value;
+    return true;
+}
+
+bool parse_hex(byte *str, uint *out)
+{
+    byte *end;
+
+    uint value = strtoul(str, &end, 16);
+
+    if (end == str)
+        return false;
+
+    if (*end != '\0')
+        return false;
+
+    *out = (uint)value;
+    return true;
+}
+
+bool parse_long(byte *str, long *out)
+{
+    byte *end;
+
+    long value = strtoll(str, &end, 10);
+
+    if (end == str)
+        return false;
+
+    if (*end != '\0')
+        return false;
+
+    *out = value;
+    return true;
+}
+
+bool parse_ulong(byte *str, ulong *out)
+{
+    byte *end;
+
+    ulong value = strtoull(str, &end, 10);
+
+    if (end == str)
+        return false;
+
+    if (*end != '\0')
+        return false;
+
+    *out = value;
+    return true;
+}
+
+bool parse_float(byte *str, float *out)
+{
+    byte *end;
+
+    float value = strtof(str, &end);
+
+    if (end == str)
+        return false;
+
+    if (*end != '\0')
+        return false;
+
+    *out = value;
+    return true;
+}
+
+bool parse_double(byte *str, double *out)
+{
+    byte *end;
+
+    double value = strtod(str, &end);
+    if (end == str)
+        return false;
+
+    if (*end != '\0')
+        return false;
+
+    *out = value;
+    return true;
+}
+
+string ftrim(string str)
+{
+    string temp = str;
+    if(temp.indexOfChar('.') != -1)
+    {
+        while(temp[temp.length-1] == '0')
+            temp = temp.substr(0, temp.length-1);
+        if(temp[temp.length-1] == '.')
+            temp = temp + '0';
+    }
+    return temp;
+}
+
+
+
+class PropertyEditor
+{
+    static dictionary<string, string> editors = new dictionary<string, string>();
+
+    static void RegisterEditor(string typeName, string editor)
+    {
+        editors[typeName] = editor;
+    }
+
+    virtual string GetStringValue(object obj, RTTIProperty prop)
+    {
+        return null;
+    }
+
+    virtual bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        return false;
+    }
+
+    virtual void OnEnterEdit(PropertyGrid pgrid, object obj, RTTIProperty prop, int y)
+    {
+    }
+
+    virtual bool OnLeaveEdit(PropertyGrid pgrid, object obj, RTTIProperty prop)
+    {
+        return false;
+    }
+
+    virtual void CancelEdit(PropertyGrid pgrid, object obj, RTTIProperty prop)
+    {
+    }
+
+    virtual void Draw(Canvas canvas, int x, int y, int width, int height, Font font, uint foreColor, object obj, RTTIProperty prop)
+    {
+    }
+}
+
+class TextEditor : PropertyEditor
+{
+    static Textbox textBox = null;
+
+    void OnEnterEdit(PropertyGrid pgrid, object obj, RTTIProperty prop, int y)
+    {
+        if(textBox == null)
+        {
+            textBox = new Textbox(pgrid, 0, 0, 99-16, 19);
+        }
+
+        textBox.SetPosition(pgrid.width - 100, y);
+        string value = GetStringValue(obj, prop);
+        textBox.Text = value;
+        textBox.Visible = true;
+        textBox.Focus();
+    }
+
+    bool OnLeaveEdit(PropertyGrid pgrid, object obj, RTTIProperty prop)
+    {
+        if(textBox != null)
+        {
+            textBox.Visible = false;
+            string value = GetStringValue(obj, prop);
+            if(textBox.Text != value)
+            {
+                if(!SetStringValue(obj, prop, textBox.Text))
+                {
+                    textBox.Visible = true;
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    void CancelEdit(PropertyGrid pgrid, object obj, RTTIProperty prop)
+    {
+        if(textBox != null)
+        {
+            textBox.Visible = false;
+        }
+    }
+
+    void Draw(Canvas canvas, int x, int y, int width, int height, Font font, uint foreColor, object obj, RTTIProperty prop)
+    {
+        string value = GetStringValue(obj, prop);
+        canvas.DrawText(x, y + 3, value, font, foreColor);
+    }
+}
+
+class DropdownEditor : PropertyEditor
+{
+    static Dropdown dropDown = null;
+
+    virtual array<string> GetValues(RTTIProperty prop)
+    {
+        return null;
+    }
+
+    void OnEnterEdit(PropertyGrid pgrid, object obj, RTTIProperty prop, int y)
+    {
+        if(dropDown == null)
+        {
+            dropDown = new Dropdown(pgrid, 0, 0, 99-16, 19);
+        }
+        dropDown.SetPosition(pgrid.width - 100, y);
+        string value = GetStringValue(obj, prop);
+        dropDown.Text = value;
+        dropDown.Items.Clear();
+        array<string> values = GetValues(prop);
+        if(values != null)
+        {
+            for(int i = 0; i < values.count; ++i)
+            {
+                dropDown.Items.Add(values[i]);
+                if(value == values[i])
+                    dropDown.listbox.SelectedIndex = i;
+            }
+        }
+        dropDown.Visible = true;
+        dropDown.Focus();
+    }
+
+    bool OnLeaveEdit(PropertyGrid pgrid, object obj, RTTIProperty prop)
+    {
+        if(dropDown != null)
+        {
+            dropDown.Visible = false;
+            string value = GetStringValue(obj, prop);
+            if(dropDown.Text != value)
+            {
+                if(!SetStringValue(obj, prop, dropDown.Text))
+                {
+                    dropDown.Visible = true;
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    void CancelEdit(PropertyGrid pgrid, object obj, RTTIProperty prop)
+    {
+        if(dropDown != null)
+        {
+            dropDown.Visible = false;
+        }
+    }
+
+    void Draw(Canvas canvas, int x, int y, int width, int height, Font font, uint foreColor, object obj, RTTIProperty prop)
+    {
+        string value = GetStringValue(obj, prop);
+        canvas.DrawText(x, y + 3, value, font, foreColor);
+    }
+}
+
+class BoolPropertyEditor : DropdownEditor
+{
+    array<string> GetValues(RTTIProperty prop)
+    {
+        array<string> result = new array<string>();
+        result.add(new string("false"));
+        result.add(new string("true"));
+        return result;
+    }
+    string GetStringValue(object obj, RTTIProperty prop)
+    {
+        bool value = prop.GetBoolValue(obj);
+        return value ? "true" : "false";
+    }
+    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        bool value = value != "false" ? true : false;
+        prop.SetBoolValue(obj, value);
+        return true;
+    }
+}
+
+class EnumPropertyEditor : DropdownEditor
+{
+    array<string> GetValues(RTTIProperty prop)
+    {
+        array<string> result = new array<string>();
+        RTTIEnumType enumType = prop.propertyType as RTTIEnumType;
+        if(enumType != null)
+        {
+            array<string> names = enumType.EnumValues();
+            for(int i = 0; i < names.count; ++i)
+            {
+                result.add(names[i]);
+            }
+        }
+        return result;
+    }
+    string GetStringValue(object obj, RTTIProperty prop)
+    {
+        int value = prop.GetIntValue(obj);
+        RTTIEnumType enumType = prop.propertyType as RTTIEnumType;
+        if(enumType != null)
+        {
+            return enumType.Stringify(value);
+        }
+        return "";
+    }
+    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        RTTIEnumType enumType = prop.propertyType as RTTIEnumType;
+        if(enumType != null)
+        {
+            int intValue = enumType.Parse(value);
+            prop.SetIntValue(obj, intValue);
+            return true;
+        }
+        return false;
+    }
+}
+
+class BytePropertyEditor : TextEditor
+{
+    string GetStringValue(object obj, RTTIProperty prop)
+    {
+        byte value = prop.GetByteValue(obj);
+        return string.format("%d", value);
+    }
+
+    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        byte byteValue;
+        if(parse_byte(value.c_str(), &byteValue))
+        {
+            prop.SetByteValue(obj, byteValue);
+            return true;
+        }
+        return false;
+    }
+}
+
+class UBytePropertyEditor : TextEditor
+{
+    string GetStringValue(object obj, RTTIProperty prop)
+    {
+        ubyte value = prop.GetByteValue(obj);
+        return string.format("%u", value);
+    }
+
+    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        ubyte ubyteValue;
+        if(parse_ubyte(value.c_str(), &ubyteValue))
+        {
+            prop.SetByteValue(obj, ubyteValue);
+            return true;
+        }
+        return false;
+    }
+}
+
+class ShortPropertyEditor : TextEditor
+{
+    string GetStringValue(object obj, RTTIProperty prop)
+    {
+        short value = prop.GetShortValue(obj);
+        return string.format("%d", value);
+    }
+
+    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        short shortValue;
+        if(parse_short(value.c_str(), &shortValue))
+        {
+            prop.SetShortValue(obj, shortValue);
+            return true;
+        }
+        return false;
+    }
+}
+
+class UShortPropertyEditor : TextEditor
+{
+    string GetStringValue(object obj, RTTIProperty prop)
+    {
+        ushort value = prop.GetShortValue(obj);
+        return string.format("%u", value);
+    }
+
+    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        ushort ushortValue;
+        if(parse_ushort(value.c_str(), &ushortValue))
+        {
+            prop.SetShortValue(obj, ushortValue);
+            return true;
+        }
+        return false;
+    }
+}
+
+class IntPropertyEditor : TextEditor
+{
+    string GetStringValue(object obj, RTTIProperty prop)
+    {
+        int value = prop.GetIntValue(obj);
+        return string.format("%d", value);
+    }
+
+    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        int intValue;
+        if(parse_int(value.c_str(), &intValue))
+        {
+            prop.SetIntValue(obj, intValue);
+            return true;
+        }
+        return false;
+    }
+}
+
+class UIntPropertyEditor : TextEditor
+{
+    string GetStringValue(object obj, RTTIProperty prop)
+    {
+        uint value = prop.GetIntValue(obj);
+        return string.format("%u", value);
+    }
+
+    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        uint intValue;
+        if(parse_uint(value.c_str(), &intValue))
+        {
+            prop.SetIntValue(obj, intValue);
+            return true;
+        }
+        return false;
+    }
+}
+
+class LongPropertyEditor : TextEditor
+{
+    string GetStringValue(object obj, RTTIProperty prop)
+    {
+        long value = prop.GetLongValue(obj);
+        return string.format("%lld", value);
+    }
+
+    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        long longValue;
+        if(parse_long(value.c_str(), &longValue))
+        {
+            prop.SetLongValue(obj, longValue);
+            return true;
+        }
+        return false;
+    }
+}
+
+class ULongPropertyEditor : TextEditor
+{
+    string GetStringValue(object obj, RTTIProperty prop)
+    {
+        ulong value = prop.GetLongValue(obj);
+        return string.format("%llu", value);
+    }
+
+    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        ulong longValue;
+        if(parse_ulong(value.c_str(), &longValue))
+        {
+            prop.SetLongValue(obj, longValue);
+            return true;
+        }
+        return false;
+    }
+}
+
+class FloatPropertyEditor : TextEditor
+{
+    string GetStringValue(object obj, RTTIProperty prop)
+    {
+        float value = prop.GetFloatValue(obj);
+        return ftrim(string.format("%f", value));
+    }
+
+    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        float floatValue;
+        if(parse_float(value.c_str(), &floatValue))
+        {
+            prop.SetFloatValue(obj, floatValue);
+            return true;
+        }
+        return false;
+    }
+}
+
+class DoublePropertyEditor : TextEditor
+{
+    string GetStringValue(object obj, RTTIProperty prop)
+    {
+        double value = prop.GetDoubleValue(obj);
+        return ftrim(string.format("%f", value));
+    }
+    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        double doubleValue;
+        if(parse_double(value.c_str(), &doubleValue))
+        {
+            prop.SetDoubleValue(obj, doubleValue);
+            return true;
+        }
+        return false;
+    }
+}
+
+class StringPropertyEditor: TextEditor
+{
+    string GetStringValue(object obj, RTTIProperty prop)
+    {
+        object value = prop.GetObjectValue(obj);
+        return value as string;
+    }
+
+    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        prop.SetObjectValue(obj, value);
+        return true;
+    }
+}
+
+class ColorPropertyEditor : PropertyEditor
+{
+    virtual string GetStringValue(object obj, RTTIProperty prop)
+    {
+        uint value = prop.GetIntValue(obj);
+        return string.format("%6.6x", value);
+    }
+
+    virtual bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        uint intValue;
+        if(parse_hex(value.c_str(), &intValue))
+        {
+            prop.SetIntValue(obj, intValue);
+            return true;
+        }
+        return false;
+    }
+
+    static Textbox textBox = null;
+    static Button button = null;
+    object selectedObject = null;
+    RTTIProperty selectedProperty = null;
+
+    void OnButtonClicked(object sender, void* args)
+    {
+        uint value;
+        if(parse_hex(textBox.Text.c_str(), &value))
+        {
+            ChooseColorDialog dlg = new ChooseColorDialog();
+            dlg.FullOpen = true;
+            dlg.Color = value;
+            if(dlg.ShowDialog(button.parent.parent))
+            {
+                textBox.Text = string.format("%6.6x", dlg.Color);
+            }
+        }
+    }
+
+    void OnEnterEdit(PropertyGrid pgrid, object obj, RTTIProperty prop, int y)
+    {
+        selectedObject = obj;
+        selectedProperty = prop;
+        if(textBox == null)
+        {
+            textBox = new Textbox(pgrid, 0, 0, 99-16-19+1, 19);
+            button = new Button(pgrid, 0, 0, 19, 19);
+            button.Clicked += new Delegate(this, ColorPropertyEditor.OnButtonClicked);
+            button.Text = "...";
+        }
+
+        textBox.SetPosition(pgrid.width - 100, y);
+        button.SetPosition(pgrid.width - 19-16, y);
+        string value = GetStringValue(obj, prop);
+        textBox.Text = value;
+        textBox.Visible = true;
+        button.Visible = true;
+        textBox.Focus();
+    }
+
+    bool OnLeaveEdit(PropertyGrid pgrid, object obj, RTTIProperty prop)
+    {
+        if(textBox != null)
+        {
+            textBox.Visible = false;
+            button.Visible = false;
+            string value = GetStringValue(obj, prop);
+            if(textBox.Text != value)
+            {
+                if(!SetStringValue(obj, prop, textBox.Text))
+                {
+                    textBox.Visible = true;
+                    button.Visible = true;
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    void CancelEdit(PropertyGrid pgrid, object obj, RTTIProperty prop)
+    {
+        if(textBox != null)
+        {
+            textBox.Visible = false;
+            button.Visible = false;
+        }
+    }
+
+    void Draw(Canvas canvas, int x, int y, int width, int height, Font font, uint foreColor, object obj, RTTIProperty prop)
+    {
+        uint value = prop.GetIntValue(obj);
+        Brush brush = new Brush(value);
+        canvas.FillRectangle(x, y+3, width, height, brush);
+    }
+}
+
+class BitmapPropertyEditor : PropertyEditor
+{
+    virtual string GetStringValue(object obj, RTTIProperty prop)
+    {
+        return null;
+    }
+
+    virtual bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        return true;
+    }
+
+    static Button button = null;
+    object selectedObject = null;
+    RTTIProperty selectedProperty = null;
+
+    void OnButtonClicked(object sender, void* args)
+    {
+        OpenFileDialog dlg = new OpenFileDialog();
+        dlg.Filter = "Bitmap Files|*.bmp|All Files|*.*|";
+        dlg.Title = "Select Bitmap";
+        if(dlg.Show(button.parent.parent))
+        {
+            string fileName = dlg.FileName;
+            Bitmap bmp = Bitmap.FromFile(fileName);
+            selectedProperty.SetObjectValue(selectedObject, bmp);
+            button.parent.Invalidate();
+        }
+    }
+
+    void OnEnterEdit(PropertyGrid pgrid, object obj, RTTIProperty prop, int y)
+    {
+        selectedObject = obj;
+        selectedProperty = prop;
+        if(button == null)
+        {
+            button = new Button(pgrid, 0, 0, 19, 19);
+            button.Clicked += new Delegate(this, BitmapPropertyEditor.OnButtonClicked);
+            button.Text = "...";
+        }
+
+        button.SetPosition(pgrid.width - 19-16, y);
+        button.Visible = true;
+    }
+
+    bool OnLeaveEdit(PropertyGrid pgrid, object obj, RTTIProperty prop)
+    {
+        if(button != null)
+        {
+            button.Visible = false;
+            return true;
+        }
+        return false;
+    }
+
+    void CancelEdit(PropertyGrid pgrid, object obj, RTTIProperty prop)
+    {
+        if(button != null)
+        {
+            button.Visible = false;
+        }
+    }
+
+    void Draw(Canvas canvas, int x, int y, int width, int height, Font font, uint foreColor, object obj, RTTIProperty prop)
+    {
+        Bitmap value = prop.GetObjectValue(obj) as Bitmap;
+        if(value != null)
+        {
+            int w, h;
+            h = height;
+            w = value.width * height / value.height;
+            canvas.DrawBitmap(x, y+3, w, h, value);
+        }
+    }
+}
+
+class FilenamePropertyEditor : PropertyEditor
+{
+    string GetStringValue(object obj, RTTIProperty prop)
+    {
+        object value = prop.GetObjectValue(obj);
+        return value as string;
+    }
+
+    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        prop.SetObjectValue(obj, value);
+        return true;
+    }
+
+    static Button button = null;
+    object selectedObject = null;
+    RTTIProperty selectedProperty = null;
+
+    void OnButtonClicked(object sender, void* args)
+    {
+        OpenFileDialog dlg = new OpenFileDialog();
+        dlg.Filter = "All Files|*.*|";
+        dlg.Title = "Select File";
+        if(selectedProperty.HasAttribute("FilenameFilter"))
+            dlg.Filter = selectedProperty.GetAttributeString("FilenameFilter");
+        string fileName = selectedProperty.GetObjectValue(selectedObject) as string;
+        if(fileName)
+            dlg.FileName = fileName;
+        if(dlg.Show(button.parent.parent))
+        {
+            selectedProperty.SetObjectValue(selectedObject, dlg.FileName);
+            button.parent.Invalidate();
+        }
+
+    }
+
+    void OnEnterEdit(PropertyGrid pgrid, object obj, RTTIProperty prop, int y)
+    {
+        selectedObject = obj;
+        selectedProperty = prop;
+        if(button == null)
+        {
+            button = new Button(pgrid, 0, 0, 19, 19);
+            button.Clicked += new Delegate(this, FilenamePropertyEditor.OnButtonClicked);
+            button.Text = "...";
+        }
+
+        button.SetPosition(pgrid.width - 19-16, y);
+        button.Visible = true;
+    }
+
+    bool OnLeaveEdit(PropertyGrid pgrid, object obj, RTTIProperty prop)
+    {
+        if(button != null)
+        {
+            button.Visible = false;
+            return true;
+        }
+        return false;
+    }
+
+    void CancelEdit(PropertyGrid pgrid, object obj, RTTIProperty prop)
+    {
+        if(button != null)
+        {
+            button.Visible = false;
+        }
+    }
+
+    void Draw(Canvas canvas, int x, int y, int width, int height, Font font, uint foreColor, object obj, RTTIProperty prop)
+    {
+        string value = GetStringValue(obj, prop);
+        if(value != null)
+            canvas.RenderPathText(x, y + 3, width, height, value, font, foreColor);
+    }
+}
+
+class PropertyGridProperty
+{
+    string name;
+    int row;
+    object target;
+    RTTIProperty prop;
+    PropertyEditor editor;
+    int expands;
+    int level;
+    PropertyGridProperty constructor(string name, object target, RTTIProperty prop)
+    {
+        this.name = name;
+        this.target = target;
+        this.prop = prop;
+        return this;
+    }
+}
+
+bool operator<(PropertyGridProperty a, PropertyGridProperty b)
+{
+    return a.name < b.name;
+}
+
+class PropertyGrid : Control
+{
+    bool border = true;
+    Pen forePen;
+    Pen gridPen;
+    object selectedObject;
+    array<PropertyGridProperty> properties = new array<PropertyGridProperty>();
+    VScrollbar vscroll;
+    int topIndex;
+
+    [Browsable(false)]
+    object get SelectedObject() => selectedObject;
+    void set SelectedObject(object value)
+    {
+        selectedObject = value;
+        GetObjectProperties(properties, selectedObject);
+        topIndex = 0;
+        vscroll.Position = 0;
+        Layout();
+        AdjustVScroll();
+        Invalidate();
+    }
+
+    void AdjustVScroll()
+    {
+        vscroll.MaxValue = (properties.count - (height / 20)) >? 0;        
+        int itemHeight = 20;
+        int numVisible = height / itemHeight;
+        vscroll.PageSize = numVisible;
+        vscroll.Invalidate();
+    }
+
+    uint GetWindowStyle()
+    {
+        return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
+    }
+
+    PropertyGrid constructor(Window parent, int x, int y, int w, int h)
+    {
+        base(parent, x, y, w, h);     
+        doubleBuffered = true;
+        GetHandle();
+        vscroll = new VScrollbar(this, width - 16 - 1, 1, 16, height-2);
+        vscroll.Scrolled += new Delegate(this, PropertyGrid.VScroll_Scrolled);
+        forePen = new Pen(PS_SOLID, 1, ForeColor);
+        gridPen = new Pen(PS_SOLID, 1, 0x444444);
+        return this;
+    }
+
+    void VScroll_Scrolled(object sender, void* args)
+    {
+        FinishEdit();
+        topIndex = vscroll.Position;
+        Layout();
+        Invalidate();
+    }
+
+    void FinishEdit()
+    {
+        if(editor != null)
+        {
+            if(!editor.OnLeaveEdit(this, selectedProperty.target, selectedProperty.prop))
+                    editor.CancelEdit(this, selectedProperty.target, selectedProperty.prop);
+            editor = null;
+            selectedProperty = null;
+        }
+    }
+
+    bool get Border() => border;
+    void set Border(bool value)
+    {
+        border = value;
+        Invalidate();
+    }
+
+    PropertyEditor GetEditorForProperty(RTTIProperty prop)
+    {
+        if(prop.HasAttribute("PropertyEditor"))
+        {
+            string editorClass = prop.GetAttributeString("PropertyEditor");
+            RTTIClassType editorType = RTTIType.GetType(editorClass) as RTTIClassType;
+            if(editorType != null)
+            {
+                PropertyEditor* (*creator)() = editorType.GetCreator().address;
+                if(creator != null)
+                {
+                    PropertyEditor editor = creator();
+                    return editor;
+                }
+            }
+        }
+
+        RTTIType type = prop.propertyType;
+        if(type.IsEnum())
+            return new EnumPropertyEditor();
+        else if(type == RTTIType.Bool)
+            return new BoolPropertyEditor();
+        else if(type == RTTIType.Byte)
+            return new BytePropertyEditor();
+        else if(type == RTTIType.UByte)
+            return new UBytePropertyEditor();
+        else if(type == RTTIType.Short)
+            return new ShortPropertyEditor();
+        else if(type == RTTIType.UShort)
+            return new UShortPropertyEditor();
+        else if(type == RTTIType.Int)
+            return new IntPropertyEditor();
+        else if(type == RTTIType.UInt)
+            return new UIntPropertyEditor();
+        else if(type == RTTIType.Long)
+            return new LongPropertyEditor();
+        else if(type == RTTIType.ULong)
+            return new ULongPropertyEditor();
+        else if(type == RTTIType.Float)
+            return new FloatPropertyEditor();
+        else if(type == RTTIType.Double)
+            return new DoublePropertyEditor();
+        else if(type.name == "string*")
+            return new StringPropertyEditor();
+        else if(type.name == "Bitmap*")
+            return new BitmapPropertyEditor();
+        else
+        {
+            string editorTypeName = PropertyEditor.editors[type.name];
+            if(editorTypeName != null)
+            {
+                RTTIClassType editorType = RTTIType.GetType(editorTypeName) as RTTIClassType;
+                if(editorType != null)
+                {
+                    PropertyEditor* (*creator)() = editorType.GetCreator().address;
+                    if(creator != null)
+                    {
+                        PropertyEditor editor = creator();
+                        return editor;
+                    }
+                }
+            }
+            return null;
+        }
+    }
+
+    void GetClassProperties(array<PropertyGridProperty> properties, RTTIClassType cls, object target)
+    {
+        if(cls.baseClass != null)
+            GetClassProperties(properties, cls.baseClass, target);
+        array<string> props = cls.EnumProperties();
+        for(int i = 0; i < props.count; i++)
+        {
+            RTTIProperty prop = cls.GetProperty(props[i]);
+
+            if(prop.HasAttribute("Browsable") && !prop.GetAttributeBool("Browsable"))
+                continue;
+
+            if(prop.getter == null || prop.setter == null)
+                continue;
+
+            if((prop.flags & SymbolFlags.Static) == 0)
+            {
+                string name = prop.name;
+                if(prop.HasAttribute("DisplayName"))
+                    name = prop.GetAttributeString("DisplayName");
+                PropertyGridProperty pgp = new PropertyGridProperty(name, target, prop);
+                pgp.editor = GetEditorForProperty(prop);
+                properties.add(pgp);
+                if(prop.propertyType.IsClassRef() && pgp.editor == null)
+                    pgp.expands = 1;
+            }
+        }
+    }
+
+    void GetObjectProperties(array<PropertyGridProperty> properties, object selectedObject)
+    {
+        properties.clear();
+        if(selectedObject != null)
+        {
+            RTTIClassType type = selectedObject.getClassType();
+            GetClassProperties(properties, type, selectedObject);
+            properties.sort();
+        }
+    }
+
+    void Layout()
+    {
+        for(int i = 0; i < properties.count; i++)
+        {
+            properties[i].row = i - topIndex;
+        }
+    }
+
+    void OnPaint(Canvas canvas)
+    {
+        for(int i = topIndex; i < properties.count; i++)
+        {
+            PropertyGridProperty prop = properties[i];
+            Bitmap icon = null;
+            if(prop.expands == 1)
+                icon = WindowDefaults.PropertyExpand;
+            else if(prop.expands == 2)
+                icon = WindowDefaults.PropertyCollapse;
+            int x = 5 + prop.level * 8;
+            if(icon != null)
+                x += 10;
+            canvas.RenderText(x, 3 + prop.row * 20, width-100-x, 20, prop.name, this.Font, ForeColor);
+            if(prop.editor != null)
+                prop.editor.Draw(canvas, width-100, prop.row * 20, 99-16, 19, this.Font, ForeColor, prop.target, prop.prop);
+            canvas.DrawLine(1, 2 + (prop.row + 1) * 20, vscroll.x, 2 + (prop.row + 1) * 20, gridPen);
+            if(icon != null)
+                canvas.DrawBitmap(x - 10, 8 + prop.row * 20, 7, 7, icon);
+        }
+
+        if(border)
+        {
+            canvas.DrawRectangle(0, 0, width, height, forePen);
+        }
+    }
+
+    PropertyEditor editor;
+    PropertyGridProperty selectedProperty;
+
+    PropertyGridProperty GetPropertyAt(int y)
+    {
+        int index = (y / 20) + topIndex;
+        if(index >= 0 && index < properties.count)
+        {
+            PropertyGridProperty prop = properties[index];
+            return prop;
+        }
+        return null;
+    }
+
+    void OnMouseDown(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            PropertyGridProperty prop = GetPropertyAt(y);
+            if(prop != null)
+            {
+                if(prop.expands == 1)
+                {
+                    prop.expands = 2;
+                    array<PropertyGridProperty> subProperties = new array<PropertyGridProperty>();
+                    object target = prop.prop.GetObjectValue(prop.target);
+                    GetObjectProperties(subProperties, target);
+                    int index = properties.indexOf(prop) + 1;
+                    for(int i  = 0; i < subProperties.count; ++i)
+                    {
+                        subProperties[i].level = prop.level + 1;
+                        properties.insert(index + i, subProperties[i]);
+                    }
+                    FinishEdit();
+                    Layout();
+                    AdjustVScroll();
+                    Invalidate();
+                }
+                else if(prop.expands == 2)
+                {
+                    prop.expands = 1;
+                    int index = properties.indexOf(prop) + 1;
+                    while(index < properties.count && properties[index].level > prop.level)
+                    {
+                        properties.removeAt(index);
+                    }
+                    FinishEdit();
+                    Layout();
+                    AdjustVScroll();
+                    Invalidate();
+                }
+                else
+                {
+                    if(prop.editor != null && editor != prop.editor)
+                    {
+                        bool leaveOk = true;
+                        if(editor != null)
+                            leaveOk = editor.OnLeaveEdit(this, selectedProperty.target, selectedProperty.prop);
+                        if(leaveOk)
+                        {
+                            prop.editor.OnEnterEdit(this, prop.target, prop.prop, prop.row * 20+3);
+                            editor = prop.editor;
+                            selectedProperty = prop;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void OnMouseWheel(int delta, int x, int y)
+    {
+        if(delta > 0)
+        {
+            if(vscroll.Position > 0)
+            {
+                FinishEdit();
+                vscroll.Position -= 1;
+                topIndex = vscroll.Position;
+                Layout();
+                Invalidate();
+            }
+        }
+        else if(delta < 0)
+        {
+            if(vscroll.Position < vscroll.MaxValue)
+            {
+                FinishEdit();
+                vscroll.Position += 1;
+                topIndex = vscroll.Position;
+                Layout();
+                Invalidate();
+            }
+        }
+    }
+
+    void OnSizeChanged()
+    {
+        if(vscroll != null)
+        {
+            vscroll.Left = Width - 16 - 1;
+            vscroll.Height = Height - 2;
+            Layout();
+            AdjustVScroll();
+        }
+    }
+}
