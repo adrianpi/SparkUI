@@ -25,6 +25,7 @@ const int SWP_NOZORDER   = 0x0004;
 
 const int WM_CREATE = 0x0001;
 const int WM_DESTROY = 0x0002;
+const int WM_SIZE = 0x0005;
 const int WM_PAINT = 0x000F;
 const int WM_ERASEBKG = 0x0014;
 const int WM_NCCREATE = 0x0081;
@@ -45,6 +46,7 @@ const int WM_KEYDOWN = 0x0100;
 const int WM_KEYUP = 0x0101;
 const int WM_CHAR = 0x0102;
 const int WM_COMMAND = 0x0111;
+const int WM_INITDIALOG = 0x0110;
 
 const int WM_UAHDRAWMENU = 0x0091;
 const int WM_UAHDRAWMENUITEM = 0x0092;
@@ -113,6 +115,17 @@ const int VK_UP = 0x26;
 const int VK_RIGHT = 0x27;
 const int VK_DOWN = 0x28;
 
+// ChooseColor dialog flags
+const uint CC_RGBINIT = 0x00000001;
+const uint CC_FULLOPEN = 0x00000002;
+const uint CC_PREVENTFULLOPEN = 0x00000004;
+const uint CC_SHOWHELP = 0x00000008;
+const uint CC_ENABLEHOOK = 0x00000010;
+const uint CC_ENABLETEMPLATE = 0x00000020;
+const uint CC_ENABLETEMPLATEHANDLE = 0x00000040;
+const uint CC_SOLIDCOLOR = 0x00000080;
+const uint CC_ANYCOLOR = 0x00000100;
+
 // Bitmap constants
 const int DIB_RGB_COLORS = 0;
 const int BI_RGB = 0;
@@ -151,6 +164,12 @@ const int DT_WORDBREAK  = 0x00000010;
 const int DT_SINGLELINE = 0x00000020;
 const int DT_CALCRECT   = 0x00000400;
 const int DT_HIDEPREFIX = 0x00100000;
+const int DT_PATH_ELLIPSIS = 0x00004000;
+const int DT_END_ELLIPSIS = 0x00008000;
+const int DT_WORD_ELLIPSIS = 0x00040000;
+
+const int SM_CXSCREEN  = 0;
+const int SM_CYSCREEN  = 1;
 
 struct WNDCLASSA
 {
@@ -261,6 +280,19 @@ struct BLENDFUNCTION
     byte AlphaFormat;
 }
 
+struct CHOOSECOLORA
+{
+    uint    lStructSize;
+    long    hwndOwner;
+    long    hInstance;
+    uint    rgbResult;
+    uint*   lpCustColors;
+    uint    Flags;
+    long    lCustData;
+    void*   lpfnHook;
+    byte*   lpTemplateName;
+}
+
 // External functions from the Windows API
 void PostQuitMessage(int nExitCode) external;
 long DefWindowProcA(long hwnd, uint uMsg, ulong wParam, ulong lParam) external;
@@ -338,13 +370,14 @@ int SetActiveWindow(long hWnd) external;
 int SetForegroundWindow(long hWnd) external;
 int DestroyWindow(long hWnd) external;
 byte* GetWindowTextA(long hWnd, byte* lpString, int nMaxCount) external;
+int ChooseColorA(CHOOSECOLORA* lpcc) external;
 int DwmSetWindowAttribute(long hwnd, uint dwAttribute, void* pvAttribute, uint cbAttribute) external;
 long CreateMenu() external;
 long CreatePopupMenu() external;
 int AppendMenuA(long hMenu, uint uFlags, ulong uIDNewItem, byte* lpNewItem) external;
 long SetMenu(long hWnd, long hMenu) external;
 int DrawMenuBar(long hWnd) external;
-
+int GetSystemMetrics(int nIndex) external;
 
 int MulDiv(int x, int y, int z)
 {
@@ -837,6 +870,26 @@ class Canvas
         return size;
     }
 
+    void RenderText(int x, int y, int width, int height, string text, Font font, uint color)
+    {
+        long hPrevFont = SelectObject(hdc, font.hFont);
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, color);
+        RECT rect = { x, y, x + width, y + height };
+        DrawTextA(hdc, text.c_str(), text.length, &rect, DT_SINGLELINE);
+        SelectObject(hdc, hPrevFont);
+    }
+
+    void RenderPathText(int x, int y, int width, int height, string text, Font font, uint color)
+    {
+        long hPrevFont = SelectObject(hdc, font.hFont);
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, color);
+        RECT rect = { x, y, x + width, y + height };
+        DrawTextA(hdc, text.c_str(), text.length, &rect, DT_PATH_ELLIPSIS | DT_SINGLELINE);
+        SelectObject(hdc, hPrevFont);
+    }
+
     void DrawBitmap(int x, int y, int width, int height, Bitmap bitmap)
     {
         if(bitmap == null || bitmap.hBitmap == 0)
@@ -894,6 +947,9 @@ resource IconInfo "resources/info.bmp";
 resource IconQuestion "resources/question.bmp";
 resource IconError "resources/error.bmp";
 
+resource Prop_Expand "resources/Prop_Expand.bmp";
+resource Prop_Collapse "resources/Prop_Collapse.bmp";
+
 MemoryStream GetResourceStream(byte *res, int size)
 {
     return new MemoryStream(res, size);
@@ -935,6 +991,9 @@ class WindowDefaults
     static Bitmap InfoIcon = Bitmap.FromStream(GetResourceStream(IconInfo, sizeof(IconInfo)));
     static Bitmap QuestionIcon = Bitmap.FromStream(GetResourceStream(IconQuestion, sizeof(IconQuestion)));
     static Bitmap ErrorIcon = Bitmap.FromStream(GetResourceStream(IconError, sizeof(IconError)));
+
+    static Bitmap PropertyExpand = Bitmap.FromStream(GetResourceStream(Prop_Expand, sizeof(Prop_Expand)));
+    static Bitmap PropertyCollapse = Bitmap.FromStream(GetResourceStream(Prop_Collapse, sizeof(Prop_Collapse)));
 }
 
 enum MsgFlags
