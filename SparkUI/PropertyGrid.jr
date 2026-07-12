@@ -940,7 +940,7 @@ class PropertyGrid : Control
 
     uint GetWindowStyle()
     {
-        return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
+        return WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPCHILDREN;
     }
 
     PropertyGrid constructor(Window parent, int x, int y, int w, int h)
