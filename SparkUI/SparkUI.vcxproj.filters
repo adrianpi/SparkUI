@@ -19,5 +19,6 @@
     <None Include="VScrollbar.jr" />
     <None Include="Window.jr" />
     <None Include="Dialogs.jr" />
+    <None Include="PropertyGrid.jr" />
   </ItemGroup>
 </Project>

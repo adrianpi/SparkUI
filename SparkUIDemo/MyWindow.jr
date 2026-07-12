@@ -3,6 +3,122 @@ using SparkUI;
 
 resource sparkUI32 "SPARKUI32.BMP";
 
+enum TestEnum
+{
+    Zero,
+    One,
+    Two,
+    Three,
+    Four
+}
+
+class SubSubTestClass
+{
+    int intValue = 11;
+    float floatValue = 3.33;
+    int get IntValue() => intValue;
+    void set IntValue(int value) => intValue = value;
+    float get FloatValue() => floatValue;
+    void set FloatValue(float value) => floatValue = value;
+}
+
+class SubTestClass
+{
+    int intValue = 88;
+    float floatValue = 6.28;
+    SubSubTestClass subSubObject = new SubSubTestClass();
+    int get IntValue() => intValue;
+    void set IntValue(int value) => intValue = value;
+    float get FloatValue() => floatValue;
+    void set FloatValue(float value) => floatValue = value;
+    SubSubTestClass get SubSubObject() => subSubObject;
+    void set SubSubObject(SubSubTestClass value) => subSubObject = value;
+}
+
+struct Point
+{
+    int x;
+    int y;
+}
+
+class TestClass
+{
+    int intValue = 42;
+    float floatValue = 3.14;
+    string stringValue = "Hello, world!";
+    bool boolValue = true;
+    TestEnum enumValue = TestEnum.Zero;
+    double doubleValue = 2.71828;
+    byte byteValue = 99;
+    ubyte ubyteValue = 101;
+    uint color = 0x0000ff;
+    Bitmap bitmap = null;
+    string fileName = null;
+    Point position;
+    int get IntValue() => intValue;
+    void set IntValue(int value) => intValue = value;
+    float get FloatValue() => floatValue;
+    void set FloatValue(float value) => floatValue = value;
+    [DisplayName("String Value")]
+    string get StringValue() => stringValue;
+    void set StringValue(string value) => stringValue = value;
+    bool get BoolValue() => boolValue;
+    void set BoolValue(bool value) => boolValue = value;
+    TestEnum get EnumValue() => enumValue;
+    void set EnumValue(TestEnum value) => enumValue = value;
+    //[Browsable(false)]
+    double get DoubleValue() => doubleValue;
+    void set DoubleValue(double value) => doubleValue = value;
+    byte get ByteValue() => byteValue;
+    void set ByteValue(byte value) => byteValue = value;
+    ubyte get UByteValue() => ubyteValue;
+    void set UByteValue(ubyte value) => ubyteValue = value;
+    SubTestClass subObject = new SubTestClass();
+    SubTestClass get ASubObject() => subObject;
+    void set ASubObject(SubTestClass value) => subObject = value;
+    [PropertyEditor("ColorPropertyEditor")]
+    uint get Color() => color;
+    void set Color(uint value) => color = value;
+    Bitmap get BitMap() => bitmap;
+    void set BitMap(Bitmap value) => bitmap = value;
+    [PropertyEditor("FilenamePropertyEditor")]
+    [FilenameFilter("Jargon Files|*.jr")]
+    string get FileName() => fileName;
+    void set FileName(string value) => fileName = value;
+    //[PropertyEditor("PointPropertyEditor")] 
+    Point get Position() => position;
+    void set Position(Point value)
+    {
+        position = value;
+    }
+}
+
+class PointPropertyEditor : TextEditor
+{
+    string GetStringValue(object obj, RTTIProperty prop)
+    {
+        Point (*getter)(object) = prop.getter.function.address;
+        Point value = getter(obj);
+        return string.format("%d, %d", value.x, value.y);
+    }
+
+    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    {
+        array<string> parts = value.split(",");
+        if(parts.count != 2)
+            return false;
+        int x, y;
+        if(!parse_int(parts[0].c_str(), &x))
+            return false;
+        if(!parse_int(parts[1].c_str(), &y))
+            return false;
+        Point v = {x, y};
+        void (*setter)(object, Point) = prop.setter.function.address;
+        setter(obj, v);
+        return true;
+    }
+}
+
 class MyWindow : Window
 {
     Brush bkgBrush = new Brush(0xffffee);
@@ -31,9 +147,12 @@ class MyWindow : Window
     Picturebox picturebox = null;
     Textbox textbox = null;
     Textbox textbox2 = null;
+    PropertyGrid propertyGrid = null;
+    TestClass testObject = new TestClass();
 
     void OnCreate()
     {
+        PropertyEditor.RegisterEditor("Point", "PointPropertyEditor");
         // Create a test bitmap (100x100 32bpp RGBA)
         /*testBitmap = Bitmap.FromSize(100, 100, 32);
 
@@ -120,12 +239,11 @@ class MyWindow : Window
         dropdown = new Dropdown(this, 200, 170, 200, 20);
         dropdown.Text = "Dropdown";
 
-        for(int i = 0; i < 30; ++i)
-        {
-            dropdown.Items.Add(string.format("Dropdown Item %d", i));
-        }
-
         panel = new Panel(this, 440, 210, 200, 200);
+
+        propertyGrid = new PropertyGrid(this, 650, 210, 200, 200);
+        //propertyGrid.SelectedObject = testObject;
+        propertyGrid.SelectedObject = propertyGrid;
 
         picturebox = new Picturebox(this, 440, 10, 240, 180);
         picturebox.Image = testBitmap2;
@@ -134,6 +252,21 @@ class MyWindow : Window
         textbox.Text = "Textbox1";
         textbox2 = new Textbox(this, 240, 40, 150, 20);
         textbox2.Text = "Textbox2";
+
+        //for(int i = 0; i < 30; ++i)
+        //{
+        //    dropdown.Items.Add(string.format("Dropdown Item %d", i));
+        //}
+
+        dropdown.Items.Add(testObject);
+
+        for(int i = 0; i < children.count; ++i)
+        {
+            Window child = children[i];
+            dropdown.Items.Add(child);
+        }
+
+        dropdown.Clicked += new Delegate(this, &MyWindow.DropDown_Clicked);
 
         Menu menu = new Menu();
         PopupMenu fileMenu = new PopupMenu();
@@ -284,6 +417,11 @@ class MyWindow : Window
             label1.Text = "Selected: (none)";
     }
 
+    void DropDown_Clicked(object sender, void *param)
+    {
+        propertyGrid.SelectedObject = dropdown.SelectedItem;
+    }
+
     void Button4_Clicked(object sender, void *param)
     {
         listbox.SelectedIndex-=1;
@@ -313,8 +451,8 @@ class MyWindow : Window
 int WinStart(long hInstance, long hPrevInstance, byte *pstrCommandLine, int nCmdShow)
 {
     Window window = new MyWindow();
-    window.width = 720;
-    window.height = 480;
+    window.width = 1280;
+    window.height = 720;
 
     window.Show(nCmdShow);
 
