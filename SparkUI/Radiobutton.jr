@@ -9,6 +9,8 @@ class Radiobutton : Control
     bool get Checked() => checked;
     void set Checked(bool value)
     {
+        if(value)
+            UncheckOthers();
         checked = value;
         Invalidate();
     }
