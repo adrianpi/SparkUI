@@ -1056,6 +1056,12 @@ class PropertyGrid : Control
             if(prop.getter == null || prop.setter == null)
                 continue;
 
+            if((prop.getter.flags & (SymbolFlags.Private| SymbolFlags.Protected)) != 0)
+                continue;
+
+            if((prop.setter.flags & (SymbolFlags.Private| SymbolFlags.Protected)) != 0)
+                continue;
+
             if((prop.flags & SymbolFlags.Static) == 0)
             {
                 string name = prop.name;
