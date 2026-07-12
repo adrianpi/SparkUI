@@ -80,7 +80,6 @@ class Radiobutton : Control
             RECT r = ClientRect;
             if(x>= 0 && x < r.right && y >= 0 && y < r.bottom)
             {
-                UncheckOthers();
                 Checked = true;
                 Clicked.invoke(this, null);
             }
@@ -91,7 +90,6 @@ class Radiobutton : Control
     {
         if(key == VK_SPACE)
         {
-            UncheckOthers();
             Checked = true;
             Clicked.invoke(this, null);
             return 0;
