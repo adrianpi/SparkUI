@@ -1050,6 +1050,11 @@ class Event
         handlers.add(d);
     }
 
+    void clear()
+    {
+        handlers.clear();
+    }
+
     void invoke(object sender, void *args)
     {
         for(int i = 0; i < handlers.count; ++i)

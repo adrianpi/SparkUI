@@ -761,9 +761,11 @@ class BitmapPropertyEditor : PropertyEditor
         if(button == null)
         {
             button = new Button(pgrid, 0, 0, 19, 19);
-            button.Clicked += new Delegate(this, BitmapPropertyEditor.OnButtonClicked);
             button.Text = "...";
         }
+        
+        button.Clicked.clear();
+        button.Clicked += new Delegate(this, BitmapPropertyEditor.OnButtonClicked);
 
         button.SetPosition(pgrid.width - 19-16, y);
         button.Visible = true;
@@ -843,10 +845,11 @@ class FilenamePropertyEditor : PropertyEditor
         if(button == null)
         {
             button = new Button(pgrid, 0, 0, 19, 19);
-            button.Clicked += new Delegate(this, FilenamePropertyEditor.OnButtonClicked);
             button.Text = "...";
         }
 
+        button.Clicked.clear();
+        button.Clicked += new Delegate(this, FilenamePropertyEditor.OnButtonClicked);
         button.SetPosition(pgrid.width - 19-16, y);
         button.Visible = true;
     }
