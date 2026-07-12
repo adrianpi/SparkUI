@@ -150,4 +150,19 @@ class Listbox : Control
         }
         return base(key, flags);
     }
+
+    void OnSizeChanged()
+    {
+        if(Items != null)
+        {
+            vscroll.SetPosition(width - 16 - 1, 1);
+            vscroll.SetSize(16, height - 2);
+            Items.SetSize(width - 16 - 2, height - 2);
+            int itemHeight = 20;
+            int numVisible = height / itemHeight;
+            vscroll.MaxValue = (Items.Count - numVisible) >? 0;        
+            vscroll.PageSize = numVisible;
+            vscroll.Invalidate();
+        }
+    }
 }
