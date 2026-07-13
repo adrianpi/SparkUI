@@ -45,10 +45,14 @@ class Listbox : Control
     {
         base(parent, x, y, width, height);
         GetHandle();
+        return this;
+    }
+
+    void OnCreate()
+    {
         vscroll = new VScrollbar(this, width - 16 - 1, 1, 16, height-2);
         vscroll.Scrolled += new Delegate(this, Listbox.VScroll_Scrolled);
-        Items = new ListItems(this, 1, 1, width - 16 -2, height-2);
-        return this;
+        Items = new ListItems(this, 1, 1, width - 16 -2, height-2);        
     }
 
     void OnEnabled()
@@ -153,16 +157,13 @@ class Listbox : Control
 
     void OnSizeChanged()
     {
-        if(Items != null)
-        {
-            vscroll.SetPosition(width - 16 - 1, 1);
-            vscroll.SetSize(16, height - 2);
-            Items.SetSize(width - 16 - 2, height - 2);
-            int itemHeight = 20;
-            int numVisible = height / itemHeight;
-            vscroll.MaxValue = (Items.Count - numVisible) >? 0;        
-            vscroll.PageSize = numVisible;
-            vscroll.Invalidate();
-        }
+        vscroll.SetPosition(width - 16 - 1, 1);
+        vscroll.SetSize(16, height - 2);
+        Items.SetSize(width - 16 - 2, height - 2);
+        int itemHeight = 20;
+        int numVisible = height / itemHeight;
+        vscroll.MaxValue = (Items.Count - numVisible) >? 0;        
+        vscroll.PageSize = numVisible;
+        vscroll.Invalidate();
     }
 }
