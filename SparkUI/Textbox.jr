@@ -57,7 +57,6 @@ class Textbox : Control
 
     void OnLeave()
     {
-        base();
         byte *temp = (byte*)memory.alloc(1024);
         GetWindowTextA(hWnd, temp, 1024);
         string stemp = new string(temp);
@@ -66,6 +65,7 @@ class Textbox : Control
             Text = stemp;
             TextChanged.invoke(this, null);
         }
+        base();
     }
 
     static long _EditWndProc(long hwnd, uint uMsg, ulong wParam, ulong lParam)
