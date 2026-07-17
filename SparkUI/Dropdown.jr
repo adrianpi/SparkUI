@@ -6,6 +6,7 @@ class Dropdown : Control
     Listbox listbox = null;
     ListItems Items = null;
     Event Clicked = new Event();
+    bool dropping = false;
 
     uint GetWindowStyle()
     {
@@ -25,6 +26,7 @@ class Dropdown : Control
 
         popup = new PopupWindow(parent, 0, 0, width, 162);
         listbox = new Listbox(popup, 0, 0, width, 162);
+        listbox.Leave += new Delegate(this, Dropdown.Listbox_OnLeave);
         Items = listbox.Items;
         listbox.Clicked += new Delegate(this, Dropdown.Listbox_Clicked);
         listbox.Confirmed += new Delegate(this, Dropdown.Listbox_Clicked);
@@ -43,12 +45,20 @@ class Dropdown : Control
         }
     }
 
+    void OnLeave()
+    {
+        if(!dropping)
+            base();
+        dropping = false;
+    }
+
     void OnMouseDown(int button, int x, int y)
     {
         if(button == 1)
         {
             if(!popup.Visible)
             {
+                dropping = true;
                 POINT pt = {this.x, this.y + height};
                 ClientToScreen(parent.hWnd, &pt);
                 popup.SetPosition(pt.x, pt.y);
@@ -113,6 +123,14 @@ class Dropdown : Control
         popup.Visible = false;
         EnableWindow(popup.hWnd, false);
         //DestroyWindow(popup.hWnd);
+        SetActiveWindow(parent.hWnd);
+        Focus();
+    }
+
+    void Listbox_OnLeave(object sender, void *param)
+    {
+        popup.Visible = false;
+        EnableWindow(popup.hWnd, false);
         SetActiveWindow(parent.hWnd);
         Focus();
     }
