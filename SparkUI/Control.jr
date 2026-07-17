@@ -2,6 +2,9 @@ using jargon;
 
 class Control : Window
 {
+    Event Enter = new Event();
+    Event Leave = new Event();
+
     uint GetWindowStyle()
     {
         return WS_CHILD | WS_VISIBLE;
@@ -23,11 +26,13 @@ class Control : Window
 
     virtual void OnEnter() 
     {
+        Enter.invoke(this, null);
         Invalidate();
     }
 
     virtual void OnLeave() 
     {
+        Leave.invoke(this, null);
         Invalidate();
     }
 
