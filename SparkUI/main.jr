@@ -48,6 +48,7 @@ const int WM_KEYUP = 0x0101;
 const int WM_CHAR = 0x0102;
 const int WM_COMMAND = 0x0111;
 const int WM_INITDIALOG = 0x0110;
+const int WM_USER = 0x0400;
 
 const int WM_UAHDRAWMENU = 0x0091;
 const int WM_UAHDRAWMENUITEM = 0x0092;
@@ -362,6 +363,7 @@ int ClientToScreen(long hWnd, POINT* lpPoint) external;
 int ScreenToClient(long hWnd, POINT* lpPoint) external;
 int SetWindowPos(long hWnd, long hWndAfter, int x, int y, int w, int h, uint flags) external;
 long SendMessageA(long hWnd, uint Msg, ulong wParam, ulong lParam) external;
+void PostMessageA(long hWnd, uint Msg, ulong wParam, ulong lParam) external;
 int IsDialogMessage(long hWnd, MSG* lpMsg) external;
 long GetFocus() external;
 int SetFocus(long hWnd) external;
@@ -855,6 +857,9 @@ class Canvas
 
     void DrawText(int x, int y, string text, Font font, uint color)
     {
+        if(text == null)
+            return;
+
         long hPrevFont = SelectObject(hdc, font.hFont);
         SetBkMode(hdc, TRANSPARENT);
         SetTextColor(hdc, color);
@@ -864,6 +869,12 @@ class Canvas
 
     SIZE MeasureText(string text, Font font)
     {
+        if(text == null)
+        {
+            SIZE z = {0,0};
+            return z;
+        }
+
         long hPrevFont = SelectObject(hdc, font.hFont);
         SIZE size;
         GetTextExtentPointA(hdc, text.c_str(), text.length, &size);
@@ -873,6 +884,9 @@ class Canvas
 
     void RenderText(int x, int y, int width, int height, string text, Font font, uint color)
     {
+        if(text == null)
+            return;
+
         long hPrevFont = SelectObject(hdc, font.hFont);
         SetBkMode(hdc, TRANSPARENT);
         SetTextColor(hdc, color);
