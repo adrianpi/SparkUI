@@ -1,0 +1,239 @@
+{
+    "Children": [
+        {
+            "Children": [
+            ],
+            "Alignment": 0,
+            "Menu": null,
+            "BackColor": 2039583,
+            "Left": 33,
+            "ForeColor": 16777215,
+            "Name": "Label1",
+            "@ClassName": "Label",
+            "Height": 30,
+            "VerticalAlignment": 0,
+            "AutoSize": false,
+            "AutoSizeMaxWidth": 0,
+            "Enabled": true,
+            "Text": "Label",
+            "Width": 100,
+            "Top": 37,
+            "Visible": true
+        },
+        {
+            "Children": [
+            ],
+            "Menu": null,
+            "BackColor": 14120960,
+            "Left": 28,
+            "ForeColor": 16777215,
+            "Name": "Button2",
+            "@ClassName": "Button",
+            "Height": 30,
+            "Enabled": true,
+            "Text": "Button",
+            "Width": 100,
+            "ModalResult": -1,
+            "Top": 155,
+            "Visible": true
+        },
+        {
+            "Children": [
+            ],
+            "Menu": null,
+            "BackColor": 2039583,
+            "Left": 31,
+            "ForeColor": 16777215,
+            "Name": "Checkbox3",
+            "@ClassName": "Checkbox",
+            "Height": 30,
+            "Checked": false,
+            "Enabled": true,
+            "Text": "Checkbox",
+            "Width": 100,
+            "Top": 120,
+            "Visible": true
+        },
+        {
+            "Children": [
+            ],
+            "Menu": null,
+            "BackColor": 2039583,
+            "Left": 30,
+            "ForeColor": 16777215,
+            "Name": "Radiobutton4",
+            "@ClassName": "Radiobutton",
+            "Height": 30,
+            "Checked": false,
+            "Enabled": true,
+            "Text": "Radiobutton",
+            "Width": 100,
+            "Top": 65,
+            "Visible": true
+        },
+        {
+            "Menu": null,
+            "BackColor": 2039583,
+            "Left": 166,
+            "ForeColor": 16777215,
+            "Name": "PropertyGrid5",
+            "@ClassName": "PropertyGrid",
+            "Height": 146,
+            "Enabled": true,
+            "Border": true,
+            "Text": "PropertyGrid",
+            "Width": 179,
+            "Top": 29,
+            "Visible": true
+        },
+        {
+            "Children": [
+            ],
+            "Menu": null,
+            "BackColor": 2039583,
+            "Left": 30,
+            "ForeColor": 16777215,
+            "Name": "Radiobutton6",
+            "@ClassName": "Radiobutton",
+            "Height": 30,
+            "Checked": false,
+            "Enabled": true,
+            "Text": "Radiobutton",
+            "Width": 100,
+            "Top": 90,
+            "Visible": true
+        }
+    ],
+    "Menu": {
+        "@ClassName": "Menu",
+        "Items": [
+            {
+                "Name": "miFile",
+                "Shortcut": 0,
+                "@ClassName": "MenuItem",
+                "Checked": false,
+                "SubMenu": {
+                    "@ClassName": "PopupMenu",
+                    "Items": [
+                        {
+                            "Name": "miOpen",
+                            "Shortcut": 1073741903,
+                            "@ClassName": "MenuItem",
+                            "Checked": false,
+                            "SubMenu": null,
+                            "Enabled": true,
+                            "Text": "&Open"
+                        },
+                        {
+                            "Name": "miSave",
+                            "Shortcut": 1073741907,
+                            "@ClassName": "MenuItem",
+                            "Checked": false,
+                            "SubMenu": null,
+                            "Enabled": true,
+                            "Text": "&Save"
+                        },
+                        {
+                            "Name": "miSep1",
+                            "Shortcut": 0,
+                            "@ClassName": "MenuItem",
+                            "Checked": false,
+                            "SubMenu": null,
+                            "Enabled": true,
+                            "Text": "-"
+                        },
+                        {
+                            "Name": "miExit",
+                            "Shortcut": 0,
+                            "@ClassName": "MenuItem",
+                            "Checked": false,
+                            "SubMenu": null,
+                            "Enabled": true,
+                            "Text": "E&xit"
+                        }
+                    ]
+                },
+                "Enabled": true,
+                "Text": "File"
+            },
+            {
+                "Name": "miEdit",
+                "Shortcut": 0,
+                "@ClassName": "MenuItem",
+                "Checked": false,
+                "SubMenu": {
+                    "@ClassName": "PopupMenu",
+                    "Items": [
+                        {
+                            "Name": "miUndo",
+                            "Shortcut": 1073741914,
+                            "@ClassName": "MenuItem",
+                            "Checked": false,
+                            "SubMenu": null,
+                            "Enabled": true,
+                            "Text": "Undo"
+                        },
+                        {
+                            "Name": "miRedo",
+                            "Shortcut": 1073741913,
+                            "@ClassName": "MenuItem",
+                            "Checked": false,
+                            "SubMenu": null,
+                            "Enabled": true,
+                            "Text": "Redo"
+                        },
+                        {
+                            "Name": "miSep2",
+                            "Shortcut": 0,
+                            "@ClassName": "MenuItem",
+                            "Checked": false,
+                            "SubMenu": null,
+                            "Enabled": true,
+                            "Text": "-"
+                        },
+                        {
+                            "Name": "miCut",
+                            "Shortcut": 1073741912,
+                            "@ClassName": "MenuItem",
+                            "Checked": false,
+                            "SubMenu": null,
+                            "Enabled": true,
+                            "Text": "Cut"
+                        },
+                        {
+                            "Name": "miCopy",
+                            "Shortcut": 1073741891,
+                            "@ClassName": "MenuItem",
+                            "Checked": false,
+                            "SubMenu": null,
+                            "Enabled": true,
+                            "Text": "Copy"
+                        },
+                        {
+                            "Name": "miPaste",
+                            "Shortcut": 1073741910,
+                            "@ClassName": "MenuItem",
+                            "Checked": false,
+                            "SubMenu": null,
+                            "Enabled": true,
+                            "Text": "Paste"
+                        }
+                    ]
+                },
+                "Enabled": true,
+                "Text": "Edit"
+            }
+        ]
+    },
+    "BackColor": 2039583,
+    "Left": 179,
+    "ForeColor": 16777215,
+    "Name": "MyWindow",
+    "@ClassName": "WindowEditorWindow",
+    "Height": 266,
+    "Enabled": true,
+    "Text": "MyWindow",
+    "Width": 391,
+    "Top": 263,
+    "Visible": true
+}

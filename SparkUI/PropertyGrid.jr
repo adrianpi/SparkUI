@@ -6,6 +6,10 @@ long strtoll(byte *str, byte **endptr, int _base) external;
 ulong strtoull(byte *str, byte **endptr, int _base) external;
 float strtof(byte *str, byte **endptr) external;
 double strtod(byte *str, byte **endptr) external;
+void DrawIcon(long hDC, int x, int y, long hIcon) external;
+void IntersectClipRect(long hdc, int left, int top, int right, int bottom) external;
+int SaveDC(long hDC) external;
+void RestoreDC(long hDC, int saved) external;
 
 bool parse_byte(byte *str, byte *out)
 {
@@ -236,11 +240,12 @@ class TextPropertyEditor : PropertyEditor
         this.grid = grid;
         this.prop = prop;
 
-        if(textBox == null)
+        if(textBox == null || !IsWindow(textBox.hWnd))
         {
             textBox = new Textbox(grid, 0, 0, 100-16, 20);        
         }
 
+        textBox.Parent = grid;
         textBox.Leave.clear();
         textBox.Leave += new Delegate(this, TextPropertyEditor.TextBox_Leave);
 
@@ -302,6 +307,7 @@ class DropdownPropertyEditor : PropertyEditor
             dropdown = new Dropdown(grid, 0, 0, 100-16, 20);        
         }
 
+        dropdown.Parent = grid;
         dropdown.Leave.clear();
         dropdown.Leave += new Delegate(this, DropdownPropertyEditor.Dropdown_Leave);
 
@@ -683,9 +689,11 @@ class ColorPropertyEditor : PropertyEditor
             button.Text = "...";
         }
 
+        button.Parent = grid;
         button.Clicked.clear();
         button.Clicked += new Delegate(this, ColorPropertyEditor.OnButtonClicked);
 
+        textBox.Parent = grid;
         textBox.Leave.clear();
         textBox.Leave += new Delegate(this, ColorPropertyEditor.OnTextBoxLeave);
 
@@ -774,9 +782,11 @@ class BitmapPropertyEditor : PropertyEditor
             button.Text = "...";
         }
         
+        button.Parent = grid;
         button.Clicked.clear();
         button.Clicked += new Delegate(this, BitmapPropertyEditor.OnButtonClicked);
 
+        textBox.Parent = grid;
         textBox.Text = "";
         textBox.Leave.clear();
         textBox.Leave += new Delegate(this, BitmapPropertyEditor.OnTextBoxLeave);
@@ -810,6 +820,94 @@ class BitmapPropertyEditor : PropertyEditor
             h = height;
             w = value.width * height / value.height;
             canvas.DrawBitmap(x, y+3, w, h, value);
+        }
+    }
+}
+
+class IconPropertyEditor : PropertyEditor
+{
+    virtual string GetStringValue(PropertyGridValue prop)
+    {
+        return null;
+    }
+
+    virtual bool SetStringValue(PropertyGridValue prop, string value)
+    {
+        return true;
+    }
+
+    static Textbox textBox = null;
+    static Button button = null;
+    PropertyGridValue selectedProperty = null;
+    PropertyGrid grid = null;
+
+    void OnButtonClicked(object sender, void* args)
+    {
+        OpenFileDialog dlg = new OpenFileDialog();
+        dlg.Filter = "PNG Files|*.png|All Files|*.*|";
+        dlg.Title = "Select Icon";
+        if(dlg.Show(button.parent.parent))
+        {
+            string fileName = dlg.FileName;
+            Icon icon = Icon.FromFile(fileName);
+            selectedProperty.SetObjectValue(icon);
+            button.parent.Invalidate();
+        }
+        textBox.Visible = true;
+        button.Visible = true;
+        textBox.Focus();
+    }
+
+    void OnEnterEdit(PropertyGrid pgrid, PropertyGridValue prop, int y)
+    {
+        selectedProperty = prop;
+        grid = pgrid;
+
+        if(button == null)
+        {
+            textBox = new Textbox(pgrid, 0, 0, 0, 19);
+            button = new Button(pgrid, 0, 0, 19, 19);
+            button.Text = "...";
+        }
+        
+        button.Parent = grid;
+        button.Clicked.clear();
+        button.Clicked += new Delegate(this, IconPropertyEditor.OnButtonClicked);
+
+        textBox.Parent = grid;
+        textBox.Text = "";
+        textBox.Leave.clear();
+        textBox.Leave += new Delegate(this, IconPropertyEditor.OnTextBoxLeave);
+
+        textBox.SetPosition(pgrid.width - 100, y);
+        button.SetPosition(pgrid.width - 19-16, y);
+        button.Visible = true;
+        textBox.Focus();
+    }
+
+    void OnTextBoxLeave(object sender, void *args)
+    {
+        OnLeaveEdit(grid, selectedProperty);
+    }
+
+    void OnLeaveEdit(PropertyGrid pgrid, PropertyGridValue prop)
+    {
+        if(textBox != null)
+        {
+            textBox.Visible = false;
+            button.Visible = false;
+        }
+    }
+    
+    void Draw(Canvas canvas, int x, int y, int width, int height, Font font, uint foreColor, PropertyGridValue prop)
+    {
+        Icon value = prop.GetObjectValue() as Icon;
+        if(value != null)
+        {
+            int save = SaveDC(canvas.hdc);
+            IntersectClipRect(canvas.hdc, x, y, x + width, y + height);
+            DrawIcon(canvas.hdc, x, y+1, value.hIcon);
+            RestoreDC(canvas.hdc, save);
         }
     }
 }
@@ -863,10 +961,12 @@ class FilenamePropertyEditor : PropertyEditor
             button = new Button(pgrid, 0, 0, 19, 19);
             button.Text = "...";
         }
-
+        
+        button.Parent = grid;
         button.Clicked.clear();
         button.Clicked += new Delegate(this, FilenamePropertyEditor.OnButtonClicked);
 
+        textBox.Parent = grid;
         textBox.Text = "";
         textBox.Leave.clear();
         textBox.Leave += new Delegate(this, FilenamePropertyEditor.OnTextBoxLeave);
@@ -897,6 +997,270 @@ class FilenamePropertyEditor : PropertyEditor
         string value = GetStringValue(prop);
         if(value != null)
             canvas.RenderPathText(x, y + 3, width, height, value, font, foreColor);
+    }
+}
+
+resource CollectionEditorJson "CollectionEditor.json";
+
+class CollectionEditor : Dialog
+{
+    Dropdown ddItemType;
+    Listbox lbItems;
+    PropertyGrid pgItem;
+    Button btnAdd;
+    Button btnRemove;
+    Button btnMoveUp;
+    Button btnMoveDown;
+
+    RTTIProperty property;
+    iarray collection;
+
+    void OnCreate()
+    {
+        LoadLayout(new string(CollectionEditorJson));
+
+        ddItemType = GetChildByName("ddItemType") as Dropdown;
+        lbItems = GetChildByName("lbItems") as Listbox;
+        pgItem = GetChildByName("pgItem") as PropertyGrid;
+        btnAdd = GetChildByName("btnAdd") as Button;
+        btnRemove = GetChildByName("btnRemove") as Button;
+        btnMoveUp = GetChildByName("btnMoveUp") as Button;
+        btnMoveDown = GetChildByName("btnMoveDown") as Button;
+
+        lbItems.SelectedIndexChanged += new Delegate(this, CollectionEditor.LbItems_Click);
+
+        btnAdd.Clicked += new Delegate(this, CollectionEditor.BtnAdd_Clicked);
+        btnRemove.Clicked += new Delegate(this, CollectionEditor.BtnRemove_Clicked);
+        btnMoveUp.Clicked += new Delegate(this, CollectionEditor.BtnMoveUp_Clicked);
+        btnMoveDown.Clicked += new Delegate(this, CollectionEditor.BtnMoveDown_Clicked);
+        
+        pgItem.PropertySelected += new Delegate(this, CollectionEditor.pgItem_PropertySelected);
+        pgItem.PropertyChanged += new Delegate(this, CollectionEditor.pgItem_PropertySelected);
+
+        if(property.HasAttribute("AcceptTypes"))
+        {
+            string types = property.GetAttributeString("AcceptTypes");
+            array<string> typeNames = types.split(",");
+            typeNames.sort();
+            for(int i = 0; i < typeNames.count; ++i)
+            {
+                ddItemType.Items.Add(typeNames[i]);
+            }
+            ddItemType.SelectedIndex = 0;
+        }
+
+        lbItems.Style = ListboxStyle.OwnerDraw;
+        lbItems.DrawItem += new Delegate(this, CollectionEditor.LbItems_DrawItem);
+
+        LoadCollection();
+
+        btnRemove.Enabled = false;
+        btnMoveUp.Enabled = false;
+        btnMoveDown.Enabled = false;
+    }
+
+    void LoadCollection()
+    {
+        for(int i = 0; i < collection.getElementCount(); ++i)
+        {
+            object obj = null;
+            collection.getElement(i, &obj);
+            lbItems.Items.Add(obj);
+        }
+    }
+
+    void LbItems_Click(object sender, void* args)
+    {
+        pgItem.SelectedObject = lbItems.SelectedItem;
+        
+        btnRemove.Enabled = lbItems.SelectedIndex != -1;
+        btnMoveUp.Enabled = lbItems.SelectedIndex > 0;
+        btnMoveDown.Enabled = lbItems.SelectedIndex < lbItems.Items.Count - 1;
+    }
+
+    void BtnAdd_Clicked(object sender, void* args)
+    {
+        RTTIClassType cls = RTTIType.GetType(ddItemType.Text) as RTTIClassType;
+        if(cls == null)
+            return;
+        object (*ctor)() = cls.GetCreator().address;
+        object newInstance = ctor();
+
+        collection.addElement(&newInstance);
+        lbItems.Items.Add(newInstance);
+        pgItem.SelectedObject = newInstance;
+        lbItems.SelectedIndex = lbItems.Items.Count - 1;
+
+        btnRemove.Enabled = true;
+        btnMoveUp.Enabled = lbItems.SelectedIndex > 0;
+        btnMoveDown.Enabled = lbItems.SelectedIndex < lbItems.Items.Count - 1;
+    }
+
+    void BtnRemove_Clicked(object sender, void *args)
+    {
+        if(MessageBox.Show("Are you sure you want to remove this item?", "Remove", MsgFlags.Question | MsgFlags.YesNo) != 1)
+            return;
+
+        collection.removeElementAt(lbItems.SelectedIndex); 
+
+        lbItems.Items.RemoveAt(lbItems.SelectedIndex);
+
+        btnRemove.Enabled = lbItems.SelectedIndex != -1;
+        btnMoveUp.Enabled = lbItems.SelectedIndex > 0;
+        btnMoveDown.Enabled = lbItems.SelectedIndex < lbItems.Items.Count - 1;
+
+        pgItem.SelectedObject = lbItems.SelectedItem;
+    }
+
+    void BtnMoveUp_Clicked(object sender, void *args)
+    {
+        object a = null;
+        object b = null;
+        int index = lbItems.SelectedIndex;
+
+        collection.getElement(index, &a);
+        collection.getElement(index-1, &b);
+        collection.setElement(index, &b);
+        collection.setElement(index-1, &a);
+
+        lbItems.Items[index] = b;
+        lbItems.Items[index-1] = a;
+
+        lbItems.SelectedIndex = index-1;
+
+        btnMoveUp.Enabled = lbItems.SelectedIndex > 0;
+        btnMoveDown.Enabled = lbItems.SelectedIndex < lbItems.Items.Count - 1;
+    }
+
+    void BtnMoveDown_Clicked(object sender, void *args)
+    {
+        object a = null;
+        object b = null;
+        int index = lbItems.SelectedIndex;
+
+        collection.getElement(index, &a);
+        collection.getElement(index+1, &b);
+        collection.setElement(index, &b);
+        collection.setElement(index+1, &a);
+
+        lbItems.Items[index] = b;
+        lbItems.Items[index+1] = a;
+
+        lbItems.SelectedIndex = index+1;
+
+        btnMoveUp.Enabled = lbItems.SelectedIndex > 0;
+        btnMoveDown.Enabled = lbItems.SelectedIndex < lbItems.Items.Count - 1;
+    }
+
+    void LbItems_DrawItem(object sender, void *param)
+    {
+        DrawItemInfo info = (DrawItemInfo)param;
+
+        if(info.index < 0 || info.index >= lbItems.Items.Count)
+            return;
+
+        if(info.selected)
+        {
+            info.canvas.FillRectangle(info.left, info.top, info.width, info.height, new Brush(0xaa5555));
+        }
+
+        RTTIClassType cls = lbItems.Items[info.index].getClassType();
+        string text = cls.name;
+        RTTIProperty pName = cls.GetProperty("Name");
+        if(pName != null)
+        {
+            string name = pName.GetObjectValue(lbItems.Items[info.index]) as string;
+            if(name != null && name.length > 0)
+            {
+                text += " ";
+                text += name;
+            }
+        }
+        info.canvas.DrawText(info.left + 2, info.top + 1, text, this.Font, lbItems.Enabled ? lbItems.ForeColor : WindowDefaults.WindowForeColorDisabled);
+    }
+
+    void pgItem_PropertySelected(object sender, void *param)
+    {
+        lbItems.Invalidate();
+    }
+}
+
+class CollectionPropertyEditor : PropertyEditor
+{
+    /*string GetStringValue(PropertyGridValue prop)
+    {
+        object value = prop.GetObjectValue();
+        return value as string;
+    }
+
+    bool SetStringValue(PropertyGridValue prop, string value)
+    {
+        prop.SetObjectValue(value);
+        return true;
+    }*/
+
+    static Textbox textBox = null;
+    static Button button = null;
+    PropertyGridValue selectedProperty = null;
+    PropertyGrid grid = null;
+
+    void OnButtonClicked(object sender, void* args)
+    {
+        CollectionEditor collectionEditor = new CollectionEditor();
+        collectionEditor.property = selectedProperty.prop;
+        collectionEditor.collection = selectedProperty.GetObjectValue() as iarray;
+        collectionEditor.ShowDialog(grid.GetTopLevelParent());
+
+        grid.editor = null;
+    }
+
+    void OnEnterEdit(PropertyGrid pgrid, PropertyGridValue prop, int y)
+    {
+        selectedProperty = prop;
+        grid = pgrid;
+
+        if(button == null)
+        {
+            textBox = new Textbox(pgrid, 0, 0, 0, 19);
+            button = new Button(pgrid, 0, 0, 19, 19);
+            button.Text = "...";
+        }
+        
+        button.Parent = grid;
+        button.Clicked.clear();
+        button.Clicked += new Delegate(this, CollectionPropertyEditor.OnButtonClicked);
+
+        textBox.Parent = grid;
+        textBox.Text = "";
+        textBox.Leave.clear();
+        textBox.Leave += new Delegate(this, CollectionPropertyEditor.OnTextBoxLeave);
+
+        textBox.SetPosition(pgrid.width - 100, y);
+        button.SetPosition(pgrid.width - 19-16, y);
+        button.Visible = true;
+        textBox.Visible = true;
+        textBox.Focus();
+    }
+
+    void OnTextBoxLeave(object sender, void *args)
+    {
+        OnLeaveEdit(grid, selectedProperty);
+    }
+
+    void OnLeaveEdit(PropertyGrid pgrid, PropertyGridValue prop)
+    {
+        if(button != null)
+        {
+            textBox.Visible = false;
+            button.Visible = false;
+        }
+    }
+
+    void Draw(Canvas canvas, int x, int y, int width, int height, Font font, uint foreColor, object obj, RTTIProperty prop)
+    {
+        /*string value = GetStringValue(prop);
+        if(value != null)
+            canvas.RenderPathText(x, y + 3, width, height, value, font, foreColor);*/
     }
 }
 
@@ -1211,6 +1575,9 @@ bool operator<(PropertyGridValue a, PropertyGridValue b)
     return a.label < b.label;
 }
 
+[SerializeSkip("Children,SelectedObject")]
+[DefaultWidth(150)]
+[DefaultHeight(150)]
 class PropertyGrid : Control
 {
     bool border = true;
@@ -1222,6 +1589,8 @@ class PropertyGrid : Control
     VScrollbar vscroll;
     PropertyGridValue selectedProperty;
     PropertyEditor editor;
+    Event PropertySelected = new Event();
+    Event PropertyChanged = new Event();
 
     bool get Border() => border;
     void set Border(bool value)
@@ -1327,6 +1696,13 @@ class PropertyGrid : Control
             return new StringPropertyEditor();
         else if(type.name == "Bitmap*")
             return new BitmapPropertyEditor();
+        else if(type.name == "Icon*")
+            return new IconPropertyEditor();
+        else if((type.IsClassRef()
+                && ((RTTIClassType)((RTTIPointerType)type).elementType).IsClassOf(typeof(iarray))))
+        {
+            return new CollectionPropertyEditor();
+        }
         else
         {
             string editorTypeName = PropertyEditor.editors[type.name];
@@ -1359,13 +1735,21 @@ class PropertyGrid : Control
             if(prop.HasAttribute("Browsable") && !prop.GetAttributeBool("Browsable"))
                 continue;
 
-            if(prop.getter == null || prop.setter == null)
+            //if(prop.getter == null || prop.setter == null)
+            //    continue;
+            RTTIType ptype = prop.propertyType;
+
+            if(prop.getter == null || 
+                (prop.setter == null && !(ptype.IsClassRef()
+                && ((RTTIClassType)((RTTIPointerType)ptype).elementType).IsClassOf(typeof(iarray)))))
+            {
                 continue;
+            }
 
             if((prop.getter.flags & (SymbolFlags.Private| SymbolFlags.Protected)) != 0)
                 continue;
 
-            if((prop.setter.flags & (SymbolFlags.Private| SymbolFlags.Protected)) != 0)
+            if(prop.setter != null && (prop.setter.flags & (SymbolFlags.Private| SymbolFlags.Protected)) != 0)
                 continue;
 
             if((prop.flags & SymbolFlags.Static) != 0)
@@ -1528,6 +1912,7 @@ class PropertyGrid : Control
                 {
                     if(prop.editor != null && editor != prop.editor)
                     {
+                        PropertySelected.invoke(this, null);
                         prop.editor.OnEnterEdit(this, prop, prop.row * 20+3);
                         editor = prop.editor;
                         selectedProperty = prop;
@@ -1549,6 +1934,8 @@ class PropertyGrid : Control
 
     void Commit(PropertyGridValue prop)
     {
+        PropertyChanged.invoke(this, null);
+
         int index = properties.indexOf(prop);
         if(index == -1)
             return;

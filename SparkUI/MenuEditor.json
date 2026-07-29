@@ -1,0 +1,133 @@
+{
+    "Children": [
+        {
+            "Menu": null,
+            "BackColor": 2039583,
+            "Left": 18,
+            "ForeColor": 16777215,
+            "Name": "tvMenu",
+            "@ClassName": "Treeview",
+            "Height": 260,
+            "Enabled": true,
+            "Border": true,
+            "Nodes": [
+            ],
+            "Text": "",
+            "Width": 220,
+            "Top": 10,
+            "Visible": true
+        },
+        {
+            "Children": [
+            ],
+            "Menu": null,
+            "BackColor": 14120960,
+            "Left": 250,
+            "ForeColor": 16777215,
+            "Name": "btnAdd",
+            "@ClassName": "Button",
+            "Height": 30,
+            "Enabled": true,
+            "Text": "Add",
+            "Width": 100,
+            "ModalResult": -1,
+            "Top": 10,
+            "Visible": true
+        },
+        {
+            "Children": [
+            ],
+            "Menu": null,
+            "BackColor": 14120960,
+            "Left": 250,
+            "ForeColor": 16777215,
+            "Name": "btnRemove",
+            "@ClassName": "Button",
+            "Height": 30,
+            "Enabled": false,
+            "Text": "Remove",
+            "Width": 100,
+            "ModalResult": -1,
+            "Top": 50,
+            "Visible": true
+        },
+        {
+            "Children": [
+            ],
+            "Menu": null,
+            "BackColor": 14120960,
+            "Left": 250,
+            "ForeColor": 16777215,
+            "Name": "btnMoveUp",
+            "@ClassName": "Button",
+            "Height": 30,
+            "Enabled": false,
+            "Text": "Move Up",
+            "Width": 100,
+            "ModalResult": -1,
+            "Top": 110,
+            "Visible": true
+        },
+        {
+            "Children": [
+            ],
+            "Menu": null,
+            "BackColor": 14120960,
+            "Left": 250,
+            "ForeColor": 16777215,
+            "Name": "btnMoveDown",
+            "@ClassName": "Button",
+            "Height": 30,
+            "Enabled": false,
+            "Text": "Move Down",
+            "Width": 100,
+            "ModalResult": -1,
+            "Top": 150,
+            "Visible": true
+        },
+        {
+            "Menu": null,
+            "BackColor": 2039583,
+            "Left": 360,
+            "ForeColor": 16777215,
+            "Name": "pgItem",
+            "@ClassName": "PropertyGrid",
+            "Height": 260,
+            "Enabled": true,
+            "Border": true,
+            "Text": "",
+            "Width": 220,
+            "Top": 10,
+            "Visible": true
+        },
+        {
+            "Children": [
+            ],
+            "Menu": null,
+            "BackColor": 14120960,
+            "Left": 480,
+            "ForeColor": 16777215,
+            "Name": "btnClose",
+            "@ClassName": "Button",
+            "Height": 30,
+            "Enabled": true,
+            "Text": "Close",
+            "Width": 100,
+            "ModalResult": 0,
+            "Top": 290,
+            "Visible": true
+        }
+    ],
+    "Menu": null,
+    "BackColor": 2039583,
+    "Left": 315,
+    "ForeColor": 16777215,
+    "Name": "MenuEditor",
+    "@ClassName": "WindowEditorWindow",
+    "Height": 375,
+    "Enabled": true,
+    "Text": "Menu Editor",
+    "Width": 614,
+    "Top": 234,
+    "Visible": true
+}

@@ -1,0 +1,738 @@
+using jargon;
+using JargonJson;
+
+class WindowPropertiesWindow : Window
+{
+    Button btnNew;
+    Button btnOpen;
+    Button btnSave;
+    Dropdown ddControls;
+    PropertyGrid pgProperties;
+    WindowEditorWindow editorWindow;
+
+    int GetWindowStyleEx()
+    {
+        return WS_EX_TOOLWINDOW | WS_EX_TOPMOST;
+    }
+
+    int GetWindowStyle()
+    {
+        return WS_OVERLAPPEDWINDOW - WS_MAXIMIZEBOX;
+    }
+
+    void OnCreate()
+    {
+        int w = ClientRect.right - ClientRect.left;
+        int h = ClientRect.bottom - ClientRect.top;
+        
+        btnNew = new Button(this, 0, 0, w/3, 30);
+        btnNew.Text = "New";
+        btnNew.Clicked += new Delegate(this, WindowPropertiesWindow.BtnNew_Clicked);
+
+        btnOpen = new Button(this, w/3, 0, w/3, 30);
+        btnOpen.Text = "Open";
+        btnOpen.Clicked += new Delegate(this, WindowPropertiesWindow.BtnOpen_Clicked);
+
+        btnSave = new Button(this, w/3*2, 0, w/3, 30);
+        btnSave.Text = "Save";
+        btnSave.Clicked += new Delegate(this, WindowPropertiesWindow.BtnSave_Clicked);
+        
+        ddControls = new Dropdown(this, 0, 30, w, 20);
+        ddControls.Text = "";
+        ddControls.Clicked += new Delegate(this, WindowPropertiesWindow.Dropdown_Clicked);
+        pgProperties = new PropertyGrid(this, 0, 50, w, h - 50);
+        pgProperties.Border = false;
+    }
+
+    bool OnClosing()
+    {
+        return false;
+    }
+
+    void Dropdown_Clicked(object sender, void *param)
+    {
+        if(ddControls.SelectedItem is Control)
+        {
+            editorWindow.SetDesignerSelectedControl(ddControls.SelectedItem as Control);
+        }
+        else
+        {
+            pgProperties.SelectedObject = ddControls.SelectedItem;
+            editorWindow.SetDesignerSelectedControl(null);
+        }
+    }
+
+    void Clear()
+    {
+        for(int i = 0; i < editorWindow.children.count; ++i)
+        {
+            Control child = editorWindow.children[i] as Control;
+            if(child != null)
+                child.Destroy();
+        }
+        editorWindow.children.clear();
+        ddControls.Items.Clear();
+        ddControls.Text = "";
+        pgProperties.SelectedObject = null;
+        editorWindow.selectedControl = null;
+        ddControls.Items.Add(editorWindow);
+        editorWindow.Menu = null;
+        editorWindow.Text = "Window Editor";
+        editorWindow.SetSize(800, 600);
+        editorWindow.SetPosition(20, 40);
+        editorWindow.SmallIcon = null;
+        editorWindow.BigIcon = null;
+    }
+
+    void BtnNew_Clicked(object sender, void *param)
+    {
+        if(MessageBox.Show("Current contents will be lost. Continue?", "New", MsgFlags.YesNo | MsgFlags.Question) == 1)
+        {
+            Clear();
+        }
+    }
+
+    void BtnOpen_Clicked(object sender, void *param)
+    {
+        OpenFileDialog ofd = new OpenFileDialog();
+        ofd.FileName = "*.json";
+        ofd.Filter = "JSON Files|*.json|All Files|*.*|";
+        ofd.Title = "Open a JSON file";
+        if(ofd.Show(this))
+        {
+            Clear();
+            editorWindow.LoadLayoutFromFile(ofd.FileName);
+            editorWindow.Fill();
+        }
+    }
+
+    void BtnSave_Clicked(object sender, void *param)
+    {
+        SaveFileDialog sfd = new SaveFileDialog();
+        sfd.FileName = "Untitled.json";
+        sfd.Filter = "JSON Files|*.json|All Files|*.*|";
+        sfd.Title = "Save a JSON file";
+        sfd.DefaultExtension = "json";
+        if(sfd.Show(this))
+        {
+            WindowJsonSerializer serializer = new WindowJsonSerializer(editorWindow);
+            string json = serializer.Serialize(editorWindow);
+            file.writeAllText(sfd.FileName, json);
+        }
+    }
+
+    void OnSizeChanged()
+    {
+        int w = ClientRect.right - ClientRect.left;
+        int h = ClientRect.bottom - ClientRect.top;
+        ddControls.Width = w;
+        pgProperties.Width = w;
+        pgProperties.Height = h - 50;
+    }
+}
+
+class WindowEditorWindow : Window
+{
+    Button button1;
+    Control selectedControl;
+    PopupMenu mnuCreate;
+    WindowPropertiesWindow propertiesWindow;
+    bool designing = true;
+
+    uint GetWindowStyle()
+    {
+        return WS_OVERLAPPEDWINDOW - WS_MAXIMIZEBOX;
+    }
+
+    bool IsDesigner() => designing;
+
+    Control GetDesignerSelectedControl() => selectedControl;
+    void SetDesignerSelectedControl(Control control) 
+    { 
+        selectedControl = control; 
+        if(control != null)
+        {
+            propertiesWindow.pgProperties.SelectedObject = control;
+            propertiesWindow.ddControls.Text = control.toString();
+        }
+    }
+    void DesignerRefreshProperties()
+    {
+        if(propertiesWindow != null)
+            propertiesWindow.pgProperties.Invalidate();
+    }
+    void DesignerControlDeleted(Control control)
+    {
+        if(propertiesWindow.ddControls.SelectedItem == control)
+        {
+            propertiesWindow.ddControls.Text = "";
+            propertiesWindow.pgProperties.SelectedObject = null;
+        }
+        propertiesWindow.ddControls.Items.Remove(control);
+    }
+
+    PopupMenu DesignerGetCreateMenu(object target, void (*handler)(object, void*))
+    {
+        PopupMenu mnu = new PopupMenu();
+
+        array<string> clsNames = new array<string>();
+        clsNames.add("Label");
+        clsNames.add("Button");
+        clsNames.add("Checkbox");
+        clsNames.add("Radiobutton");
+        clsNames.add("Listbox");
+        clsNames.add("Dropdown");
+        clsNames.add("Panel");
+        clsNames.add("Picturebox");
+        clsNames.add("PropertyGrid");
+        clsNames.add("Textbox");
+        clsNames.add("Treeview");
+        clsNames.add("HScrollbar");
+        clsNames.add("VScrollbar");
+
+        for(int i = 0; i < clsNames.count; ++i)
+        {
+            string clsName = clsNames[i];
+            MenuItem mi = new MenuItem();
+            mi.Text = clsName;
+            mi.Clicked += new Delegate(target, handler);
+            mnu.items.add(mi);
+        }
+
+        return mnu;
+    }
+
+    void OnCreate()
+    {
+        PopupMenu mnu = new PopupMenu();
+
+        MenuItem miAdd = new MenuItem();
+        miAdd.Text = "Add";
+        miAdd.SubMenu = DesignerGetCreateMenu(this, WindowEditorWindow.CreateMenuItem_Clicked);
+        mnu.items.add(miAdd);
+
+        MenuItem sep = new MenuItem();
+        sep.Text = "-";
+        mnu.items.add(sep);
+
+        MenuItem miEditMenu = new MenuItem();
+        miEditMenu.Text = "Edit Menu";
+        miEditMenu.Clicked += new Delegate(this, WindowEditorWindow.EditMenu_Clicked);
+        mnu.items.add(miEditMenu);
+
+        Text = "Window Editor";
+
+        mnuCreate = mnu;
+    }
+
+    void EditMenu_Clicked(object sender, void *param)
+    {
+        designing = false;
+        MenuEditor menuEditor = new MenuEditor();
+        if(this.Menu == null)
+        {
+            this.Menu = new Menu();
+        }
+        menuEditor.editMenu = this.Menu;
+        menuEditor.ShowDialog(this);
+        designing = true;
+
+        if(this.Menu.items.count == 0)
+        {
+            this.Menu = null;
+        }
+        else
+        {
+            this.Menu.Invalidate();
+            this.Menu = menuEditor.editMenu as Menu;
+        }
+    }
+
+    void OnDestroy()
+    {
+        propertiesWindow.Close();
+    }
+
+    void OnCreated()
+    {
+        propertiesWindow = new WindowPropertiesWindow();
+        propertiesWindow.x = 1000;
+        propertiesWindow.y = 100;
+        propertiesWindow.width = 250;
+        propertiesWindow.height = 500;
+        propertiesWindow.Text = "Properties";
+        propertiesWindow.editorWindow = this;
+
+        propertiesWindow.Show(SW_NORMAL);
+
+        propertiesWindow.ddControls.Items.Add(this);
+
+        Fill();
+
+        Show(SW_NORMAL);
+    }
+
+    private void FillRecurse(Control parent)
+    {
+        for(int i = 0; i < parent.children.count; ++i)
+        {
+            Control child = parent.children[i] as Control;
+            propertiesWindow.ddControls.Items.Add(child);
+            if(child.getClassType().HasAttribute("AcceptChildren"))
+                FillRecurse(child);
+        }
+    }
+
+    void Fill()
+    {
+        FillRecurse(this);
+    }
+
+    int createX;
+    int createY;
+
+    void OnMouseDown(int button, int x, int y)
+    {
+        if(button == 2)
+        {
+            createX = x;
+            createY = y;
+            mnuCreate.Show(this, x, y);
+        }
+    }
+
+    string GetUniqueName(string clsName)
+    {
+        int index = 1;
+        string name = string.format("%s%d", clsName, index);
+        while(GetChildByName(name) != null)
+        {
+            index++;
+            name = string.format("%s%d", clsName, index);
+        }
+        return name;
+    }
+
+    void DesignerCreateControl(Window parent, string className, int x, int y)
+    {
+        RTTIClassType cls = RTTIType.GetType(className) as RTTIClassType;
+        if(cls != null)
+        {
+            object (*ctor)(object, int, int, int, int) = cls.GetCreator().address;
+            int w = 100;
+            int h = 30;
+            if(cls.HasAttribute("DefaultWidth"))
+                w = cls.GetAttributeInt("DefaultWidth");
+            if(cls.HasAttribute("DefaultHeight"))
+                h = cls.GetAttributeInt("DefaultHeight");
+            Control newControl = ctor(parent, x, y, w, h) as Control;
+            newControl.Name = GetUniqueName(className);
+            propertiesWindow.ddControls.Items.Add(newControl);
+            selectedControl = newControl;
+            propertiesWindow.ddControls.SelectedItem = newControl;
+            propertiesWindow.pgProperties.SelectedObject = newControl;
+        }
+    }
+
+    void CreateMenuItem_Clicked(object sender, void *param)
+    {
+        MenuItem *item = sender as MenuItem;
+        string clsName = item.Text;
+        DesignerCreateControl(this, clsName, createX, createY);        
+    }
+}
+
+resource MenuEditorJson "MenuEditor.json";
+
+class MenuEditor : Dialog
+{
+    MenuBase editMenu;
+    Treeview tvMenu;
+    PropertyGrid pgItem;
+    Button btnAdd;
+    Button btnRemove;
+    Button btnMoveUp;
+    Button btnMoveDown;
+    TreeNode prevNode;
+
+    void OnCreate()
+    {
+        LoadLayout(new string(MenuEditorJson));
+
+        tvMenu = GetChildByName("tvMenu") as Treeview;
+        pgItem = GetChildByName("pgItem") as PropertyGrid;
+        btnAdd = GetChildByName("btnAdd") as Button;
+        btnRemove = GetChildByName("btnRemove") as Button;
+        btnMoveUp = GetChildByName("btnMoveUp") as Button;
+        btnMoveDown = GetChildByName("btnMoveDown") as Button;
+
+        tvMenu.NodeSelected += new Delegate(this, MenuEditor.TvMenu_NodeSelected);
+
+        btnAdd.Clicked += new Delegate(this, MenuEditor.BtnAdd_Clicked);
+        btnRemove.Clicked += new Delegate(this, MenuEditor.BtnRemove_Clicked);
+        btnMoveUp.Clicked += new Delegate(this, MenuEditor.BtnMoveUp_Clicked);
+        btnMoveDown.Clicked += new Delegate(this, MenuEditor.BtnMoveDown_Clicked);
+
+        LoadMenu();
+    }
+
+    void FixName()
+    {
+        if(prevNode != null)
+        {
+            MenuItem oldItem = prevNode.Data as MenuItem;
+            if(oldItem != null)
+            {
+                prevNode.Text = oldItem.Name;
+            }
+        }
+        prevNode = null;
+    }
+
+    bool CanMoveUp()
+    {
+        TreeNode node = tvMenu.SelectedNode;
+        return node != null && node.ParentNode != null && node.ParentNode.Nodes.indexOf(node) != 0;
+    }
+
+    bool CanMoveDown()
+    {
+        TreeNode node = tvMenu.SelectedNode;
+        return node != null && node.ParentNode != null && node.ParentNode.Nodes.indexOf(node) != node.ParentNode.Nodes.count - 1;
+    }
+
+    void TvMenu_NodeSelected(object sender, void *param)
+    {
+        FixName();
+
+        TreeNode node = tvMenu.SelectedNode;
+        if(node != null && node.Data is MenuItem)
+        {
+            MenuItem item = node.Data as MenuItem;
+            pgItem.SelectedObject = item;
+            btnRemove.Enabled = true;
+        }
+        else
+        {
+            pgItem.SelectedObject = null;
+            btnRemove.Enabled = false;
+        }
+
+        btnMoveUp.Enabled = CanMoveUp();
+        btnMoveDown.Enabled = CanMoveDown();
+
+        prevNode = node;
+    }
+
+    void LoadSubMenu(MenuBase menu, TreeNode parentNode)
+    {
+        for(int i = 0; i < menu.items.count; ++i)
+        {
+            MenuItem item = menu.items[i];
+            TreeNode node = parentNode.AddNode(item.Name);
+            node.Data = item;
+            if(item.SubMenu != null)
+            {
+                LoadSubMenu(item.SubMenu, node);
+            }
+        }
+    }
+
+    void LoadMenu()
+    {
+        if(editMenu == null)
+            return;
+
+        TreeNode tnMenu = tvMenu.AddNode("Menu");
+        LoadSubMenu(editMenu, tnMenu);
+
+        tnMenu.ExpandAll();
+    }
+
+    string GetUniqueName()
+    {
+        int index = 1;
+        string name = string.format("MenuItem%d", index);
+        while(editMenu.GetItem(name) != null)
+        {
+            index++;
+            name = string.format("MenuItem%d", index);
+        }
+        return name;
+    }
+
+    void BtnAdd_Clicked(object sender, void *param)
+    {
+        FixName();
+
+        TreeNode node = tvMenu.SelectedNode;
+        if(node == null)
+            return;
+
+        MenuBase mnu = null;
+        if(node.Data == null)
+        {
+            mnu = editMenu;
+        }
+        else
+        {
+            MenuItem item = node.Data as MenuItem;
+            mnu = item.SubMenu;
+            if(mnu == null)
+            {
+                mnu = new PopupMenu();
+                item.SubMenu = mnu as PopupMenu;
+                if(node.ParentNode.Data == null)
+                {
+                    item.SubMenu.Parent = editMenu;
+                }
+                else
+                {
+                    item.SubMenu.Parent = (node.ParentNode.Data as MenuItem).SubMenu;
+                }
+            }
+        }
+
+        MenuItem newItem = new MenuItem();
+        newItem.Name = GetUniqueName();
+        newItem.Text = newItem.Name;
+        mnu.items.add(newItem);
+
+        TreeNode newNode = node.AddNode(newItem.Text);
+        newNode.Data = newItem;
+        node.Expand();
+    }
+
+    void BtnRemove_Clicked(object sender, void *param)
+    {
+        FixName();
+
+        TreeNode node = tvMenu.SelectedNode;
+        if(node == null || node.Data == null)
+            return;
+
+        if(MessageBox.Show("Are you sure you want to remove this item?", "Remove", MsgFlags.Question | MsgFlags.YesNo) != 1)
+            return;
+
+        MenuItem item = node.Data as MenuItem;
+        MenuBase mnu = null;
+        if(node.ParentNode.Data == null)
+        {
+            mnu = editMenu;
+        }
+        else
+        {
+            MenuItem parentItem = node.ParentNode.Data as MenuItem;
+            mnu = parentItem.SubMenu;
+        }
+        if(mnu != null)
+        {
+            mnu.items.remove(item);
+            tvMenu.RemoveNode(node);
+            pgItem.SelectedObject = null;
+            btnRemove.Enabled = false;
+        }
+    }
+
+    void BtnMoveUp_Clicked(object sender, void *param)
+    {
+        FixName();
+
+        TreeNode node = tvMenu.SelectedNode;
+        TreeNode parentNode = node.ParentNode;
+        int nodeIndex = parentNode.Nodes.indexOf(node);
+
+        MenuBase mnu = null;
+        if(parentNode.Data != null)
+            mnu = (parentNode.Data as MenuItem).SubMenu;
+        else
+            mnu = editMenu;
+
+        TreeNode a = parentNode.Nodes[nodeIndex];
+        TreeNode b = parentNode.Nodes[nodeIndex-1];
+        parentNode.Nodes[nodeIndex] = b;
+        parentNode.Nodes[nodeIndex-1] = a;
+
+        MenuItem itemA = mnu.items[nodeIndex];
+        MenuItem itemB = mnu.items[nodeIndex-1];
+        mnu.items[nodeIndex] = itemB;
+        mnu.items[nodeIndex-1] = itemA;
+
+        tvMenu.Invalidate();
+
+        btnMoveUp.Enabled = CanMoveUp();
+        btnMoveDown.Enabled = CanMoveDown();
+    }
+
+    void BtnMoveDown_Clicked(object sender, void *param)
+    {
+        FixName();
+
+        TreeNode node = tvMenu.SelectedNode;
+        TreeNode parentNode = node.ParentNode;
+        int nodeIndex = parentNode.Nodes.indexOf(node);
+
+        MenuBase mnu = null;
+        if(parentNode.Data != null)
+            mnu = (parentNode.Data as MenuItem).SubMenu;
+        else
+            mnu = editMenu;
+
+        TreeNode a = parentNode.Nodes[nodeIndex];
+        TreeNode b = parentNode.Nodes[nodeIndex+1];
+        parentNode.Nodes[nodeIndex] = b;
+        parentNode.Nodes[nodeIndex+1] = a;
+
+        MenuItem itemA = mnu.items[nodeIndex];
+        MenuItem itemB = mnu.items[nodeIndex+1];
+        mnu.items[nodeIndex] = itemB;
+        mnu.items[nodeIndex+1] = itemA;
+
+        tvMenu.Invalidate();
+
+        btnMoveUp.Enabled = CanMoveUp();
+        btnMoveDown.Enabled = CanMoveDown();
+    }
+}
+
+class ShortcutPropertyEditor : PropertyEditor
+{
+    string GetStringValue(PropertyGridValue prop)
+    {
+        uint value = prop.GetIntValue();
+        return MenuItem.GetShortcutText(value);
+    }
+
+    static Textbox textBox = null;
+    static Button button = null;
+    PropertyGridValue selectedProperty = null;
+    PropertyGrid grid = null;
+
+    void OnButtonClicked(object sender, void* args)
+    {
+        ShortcutEditor shortcutEditor = new ShortcutEditor();
+        shortcutEditor.shortcut = selectedProperty.GetIntValue();
+        if(shortcutEditor.ShowDialog(grid.GetTopLevelParent()) == 1)
+        {
+            selectedProperty.SetIntValue(shortcutEditor.shortcut);
+            grid.Invalidate();
+        }
+    }
+
+    void OnEnterEdit(PropertyGrid pgrid, PropertyGridValue prop, int y)
+    {
+        selectedProperty = prop;
+        grid = pgrid;
+
+        if(button == null)
+        {
+            textBox = new Textbox(pgrid, 0, 0, 0, 19);
+            button = new Button(pgrid, 0, 0, 19, 19);
+            button.Text = "...";
+        }
+        
+        button.Parent = grid;
+        button.Clicked.clear();
+        button.Clicked += new Delegate(this, ShortcutPropertyEditor.OnButtonClicked);
+
+        textBox.Parent = grid;
+        textBox.Text = "";
+        textBox.Leave.clear();
+        textBox.Leave += new Delegate(this, ShortcutPropertyEditor.OnTextBoxLeave);
+
+        textBox.SetPosition(pgrid.width - 100, y);
+        button.SetPosition(pgrid.width - 19-16, y);
+        button.Visible = true;
+        textBox.Visible = true;
+        textBox.Focus();
+    }
+
+    void OnTextBoxLeave(object sender, void *args)
+    {
+        OnLeaveEdit(grid, selectedProperty);
+    }
+
+    void OnLeaveEdit(PropertyGrid pgrid, PropertyGridValue prop)
+    {
+        if(button != null)
+        {
+            textBox.Visible = false;
+            button.Visible = false;
+            pgrid.editor = null;
+        }
+    }
+
+    void Draw(Canvas canvas, int x, int y, int width, int height, Font font, uint foreColor, PropertyGridValue prop)
+    {
+        string value = GetStringValue(prop);
+        canvas.DrawText(x, y + 3, value, font, foreColor);
+    }
+}
+
+resource ShortcutEditorJson "ShortcutEditor.json";
+
+class ShortcutEditor : Dialog
+{
+    Checkbox chkCtrl;
+    Checkbox chkShift;
+    Dropdown ddKey;
+    uint shortcut;
+
+    array<uint> shortcuts = new array<uint>();
+
+    void OnCreate()
+    {
+        shortcuts.add(0);
+        for(int i = 'A'; i <= 'Z'; ++i)
+            shortcuts.add(i);
+        for(int i = '0'; i <= '9'; ++i)
+            shortcuts.add(i);
+        for(int i = VK_F1; i <= VK_F12; ++i)
+            shortcuts.add(i);
+        shortcuts.add(VK_RETURN);
+        shortcuts.add(VK_ESCAPE);
+        shortcuts.add(VK_SPACE);
+        shortcuts.add(VK_PAGE_UP);
+        shortcuts.add(VK_PAGE_DOWN);
+        shortcuts.add(VK_END);
+        shortcuts.add(VK_HOME);
+        shortcuts.add(VK_DELETE);
+
+        LoadLayout(new string(ShortcutEditorJson));
+
+        chkCtrl = GetChildByName("chkCtrl") as Checkbox;
+        chkShift = GetChildByName("chkShift") as Checkbox;
+        ddKey = GetChildByName("ddKey") as Dropdown;
+
+        if(shortcut & SCK_CONTROL)
+            chkCtrl.Checked = true;
+        if(shortcut & SCK_SHIFT)
+            chkShift.Checked = true;
+
+        for(int i = 0; i < shortcuts.count; ++i)
+        {
+            uint sc = shortcuts[i];
+            string t = MenuItem.GetShortcutText(sc);
+            ddKey.Items.Add(t);
+            if(sc == (shortcut & 0xFFFF))
+                ddKey.SelectedItem = t;
+        }
+    }
+
+    void OnClose()
+    {
+        if(ModalResult == 1)
+        {
+            uint sc = 0;
+            if(chkCtrl.Checked)
+                sc |= SCK_CONTROL;
+            if(chkShift.Checked)
+                sc |= SCK_SHIFT;
+            if(ddKey.SelectedIndex >= 0 && ddKey.SelectedIndex < shortcuts.count)
+                sc |= shortcuts[ddKey.SelectedIndex];
+            if((sc & 0xffff) == 0) // remove modifier flags if None
+                sc = 0;
+            shortcut = sc;
+        }
+    }
+}

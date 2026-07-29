@@ -1,0 +1,332 @@
+using jargon;
+
+class TreeNode
+{
+	private string text;
+	private array<TreeNode> nodes = new array<TreeNode>();
+	internal Treeview treeView;
+	private weak TreeNode parentNode;
+	private bool expanded;
+	internal int x;
+	internal int y;
+	public object Data;
+
+	public string get Text() => text;
+	public void set Text(string value)
+	{
+		text = value;
+		treeView.Invalidate();
+	}
+
+	public array<TreeNode> get Nodes() => nodes;
+
+	public bool get Expanded() => expanded;
+
+	public TreeNode get ParentNode() => parentNode;
+
+	TreeNode constructor(Treeview treeview, string text)
+	{
+		base();
+		this.treeView = treeview;
+		this.text = text;
+		return this;
+	}
+
+	public void Expand()
+	{
+		if(nodes.count == 0)
+			return;
+
+		expanded = true;
+		treeView.Invalidate();
+	}
+
+	public void Collapse()
+	{
+		if(nodes.count == 0)
+			return;
+
+		expanded = false;
+		treeView.Invalidate();
+	}
+
+	public void ExpandAll()
+	{
+		Expand();
+		for(int i = 0; i < nodes.count; ++i)
+			nodes[i].ExpandAll();
+	}
+
+	public void CollapseAll()
+	{
+		Collapse();
+		for(int i = 0; i < nodes.count; ++i)
+			nodes[i].CollapseAll();
+	}
+
+	public TreeNode AddNode(string text)
+	{
+		TreeNode node = new TreeNode(treeView, text);
+		node.parentNode = this;
+		nodes.add(node);
+		treeView.Invalidate();
+		return node;
+	}
+
+}
+
+[SerializeSkip("Children,SelectedNode")]
+[DefaultWidth(150)]
+[DefaultHeight(150)]
+class Treeview : Control
+{
+	private bool border = true;
+    private Pen forePen;
+	private Pen linesPen;
+	private array<TreeNode> nodes = new array<TreeNode>();
+	private int dx;
+	private int dy;
+	private TreeNode selectedNode = null;
+	private VScrollbar vscroll;
+	private int totalItems;
+	public Event NodeSelected = new Event();
+
+	public array<TreeNode> get Nodes() => nodes;
+
+	bool get Border() => border;
+    void set Border(bool value)
+    {
+        border = value;
+        Invalidate();
+    }
+
+	[Browsable(false)]
+	TreeNode get SelectedNode() => selectedNode;
+	void set SelectedNode(TreeNode node)
+	{
+		selectedNode = node;
+		Invalidate();
+	}
+
+	uint GetWindowStyle()
+    {
+        return WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPCHILDREN;
+    }
+	
+	Treeview constructor(Window parent, int x, int y, int width, int height)
+	{
+		base(parent, x, y, width, height);
+        doubleBuffered = true;
+        GetHandle();
+        forePen = new Pen(PS_SOLID, 1, ForeColor);
+		linesPen = new Pen(PS_SOLID, 1, 0x555555);
+		return this;
+	}
+
+	void OnCreate()
+    {
+        vscroll = new VScrollbar(this, width - 16 - 1, 1, 16, height-2);
+        vscroll.Scrolled += new Delegate(this, Treeview.VScroll_Scrolled);
+    }
+
+	private void VScroll_Scrolled(object sender, void *param)
+	{
+		Invalidate();
+	}
+
+	public TreeNode AddNode(string text)
+	{
+		TreeNode node = new TreeNode(this, text);
+		nodes.add(node);
+		Invalidate();
+		return node;
+	}
+
+	public void RemoveNode(TreeNode node)
+	{
+		if(node.ParentNode != null)
+		{
+			node.ParentNode.Nodes.remove(node);
+		}
+		else
+		{
+			nodes.remove(node);
+		}
+		if(node == selectedNode)
+		{
+			selectedNode = null;
+			NodeSelected.invoke(this, null);
+		}
+		Invalidate();
+	}
+
+	private void DrawNode(Canvas canvas, TreeNode node)
+	{
+		/*if(dy > height)
+			return;*/
+
+		bool visible = dy+20 >= 0 && dy < height;
+
+		int tx = dx;
+		Bitmap icon = null;
+		if(node.Nodes.count > 0)
+		{
+			if(node.Expanded)
+				icon = WindowDefaults.PropertyCollapse;
+			else
+				icon = WindowDefaults.PropertyExpand;
+		}
+
+		if(icon)
+		{			
+			if(visible)
+				canvas.DrawBitmap(tx, dy+5, 7, 7, icon);
+			tx += 10;
+		}
+
+		if(node == selectedNode && visible)
+		{
+			SIZE sz = canvas.MeasureText(node.Text, this.Font);
+			canvas.FillRectangle(tx, dy, sz.cx, sz.cy, new Brush(0xaa5555));
+		}
+
+		if(visible)
+			canvas.RenderText(tx, dy, width-dx, 20, node.Text, this.Font, foreColor);
+		
+		++totalItems;
+		node.x = dx;
+		node.y = dy;
+		dy += 20;
+
+		if(node.ParentNode != null)
+		{
+			canvas.DrawLine(node.ParentNode.x + 4, node.ParentNode.y + 16,
+				node.ParentNode.x + 4, node.y + 10, linesPen);
+			canvas.DrawLine(node.ParentNode.x + 4, node.y + 10,
+				node.x - 4, node.y + 10, linesPen);
+		}
+
+		if(node.Nodes.count > 0 && node.Expanded)
+		{
+			dx += 16;
+
+			for(int i = 0; i < node.Nodes.count; ++i)
+			{
+				DrawNode(canvas, node.Nodes[i]);
+			}
+
+			dx -= 16;
+		}
+	}
+
+	public void OnPaint(Canvas canvas)
+	{
+		dx = 4;
+		dy = -vscroll.Position * 20;
+		totalItems = 0;
+
+		for(int i = 0; i < nodes.count; ++i)
+		{
+			DrawNode(canvas, nodes[i]);
+		}
+
+		if(border)
+        {
+            canvas.DrawRectangle(0, 0, width, height, forePen);
+        }
+
+		int numVisible = height / 20;
+		int max = (totalItems - numVisible) >? 0;
+		vscroll.MaxValue = max >? vscroll.Position;
+        vscroll.PageSize = numVisible;
+        vscroll.Invalidate();
+	}
+
+	private bool HitTest(int x, int y, TreeNode node)
+	{
+		int tx = dx;
+		if(node.Nodes.count > 0)
+		{
+			if(x >= dx && y >= dy && x < dx + 10 && y < dy + 20)
+			{			
+				if(node.Expanded)
+					node.Collapse();
+				else
+					node.Expand();
+				return true;
+			}
+			tx = dx + 10;
+		}
+
+		if(x >= tx && x < width && y >= dy && y < dy + 20)
+		{
+			if(selectedNode != node)
+			{
+				SelectedNode = node;
+				NodeSelected.invoke(this, null);
+			}
+			return true;
+		}
+
+		dy += 20;
+
+		if(node.Nodes.count > 0 && node.Expanded)
+		{
+			dx += 16;
+
+			for(int i = 0; i < node.Nodes.count; ++i)
+			{
+				if(HitTest(x, y, node.Nodes[i]))
+					return true;
+			}
+
+			dx -= 16;
+		}
+	}
+
+	public void OnMouseDown(int button, int x, int y)
+	{
+		if(button == 1)
+		{
+			dx = 4;
+			dy = -vscroll.Position * 20;
+
+			for(int i = 0; i < nodes.count; ++i)
+			{
+				if(HitTest(x, y, nodes[i]))
+					break;
+			}
+		}
+	}
+
+	void OnMouseWheel(int delta, int x, int y)
+    {
+        if(delta > 0)
+        {
+            if(vscroll.Position > 0)
+            {
+                vscroll.Position -= 1;
+                Invalidate();
+            }
+        }
+        else if(delta < 0)
+        {
+            if(vscroll.Position < vscroll.MaxValue)
+            {
+                vscroll.Position += 1;
+                Invalidate();
+            }
+        }
+    }
+
+	void OnSizeChanged()
+    {
+        vscroll.Left = Width - 16 - 1;
+        vscroll.Height = Height - 2;
+        int numVisible = height / 20;
+		int max = (totalItems - numVisible) >? 0;
+		vscroll.MaxValue = max >? vscroll.Position;
+        vscroll.PageSize = numVisible;
+        vscroll.Invalidate();
+    }
+}

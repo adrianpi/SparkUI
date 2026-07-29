@@ -111,7 +111,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>jlc2.exe -g -k main.jr Window.jr Control.jr Button.jr Checkbox.jr Dialogs.jr Dropdown.jr Label.jr Listbox.jr ListItems.jr Panel.jr Picturebox.jr PopupWindow.jr Radiobutton.jr Scrollbar.jr Textbox.jr HScrollbar.jr VScrollbar.jr PropertyGrid.jr -o $(OutputPath)$(TargetFileName) -ladvapi32.lib -lole32.lib -loleaut32.lib -lkernel32.lib -luser32.lib -lgdi32.lib -lMsimg32.lib -ldwmapi.lib -luxtheme.lib -lComdlg32.lib -SUBSYSTEM:WINDOWS</Command>
+      <Command>jlc2.exe -g -k main.jr Window.jr Control.jr Button.jr Checkbox.jr Dialogs.jr Dropdown.jr Label.jr Listbox.jr ListItems.jr Panel.jr Picturebox.jr PopupWindow.jr Radiobutton.jr Scrollbar.jr Textbox.jr HScrollbar.jr VScrollbar.jr PropertyGrid.jr Treeview.jr WindowEditor.jr -o $(OutputPath)$(TargetFileName) -ladvapi32.lib -lole32.lib -loleaut32.lib -lkernel32.lib -luser32.lib -lgdi32.lib -lMsimg32.lib -ldwmapi.lib -luxtheme.lib -lComdlg32.lib -SUBSYSTEM:WINDOWS</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -147,8 +147,10 @@
     <None Include="Radiobutton.jr" />
     <None Include="Scrollbar.jr" />
     <None Include="Textbox.jr" />
+    <None Include="Treeview.jr" />
     <None Include="VScrollbar.jr" />
     <None Include="Window.jr" />
+    <None Include="WindowEditor.jr" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

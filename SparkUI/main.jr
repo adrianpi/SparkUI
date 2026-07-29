@@ -10,34 +10,46 @@ const int WS_POPUP = 0x80000000;
 const int WS_TABSTOP = 0x00010000;
 const int WS_SYSMENU = 0x00080000;
 const int WS_CLIPCHILDREN = 0x02000000;
-
+const int WS_MAXIMIZEBOX = 0x00010000;
+const int WS_MINIMIZEBOX = 0x00020000;
 const int WS_EX_DLGMODALFRAME = 0x00000001;
+const int WS_EX_TOOLWINDOW = 0x00000080;
+const int WS_EX_TOPMOST = 0x00000008;
 
 const int CS_VREDRAW = 0x0001;
 const int CS_HREDRAW = 0x0002;
 
 const int CW_USEDEFAULT = 0x80000000;
 
+const int SW_NORMAL = 1;
 const int SW_SHOW = 5;
 const int SW_HIDE = 0;
 
 const int SWP_NOSIZE     = 0x0001;
 const int SWP_NOZORDER   = 0x0004;
 
+const int WM_NULL = 0x0000;
 const int WM_CREATE = 0x0001;
 const int WM_DESTROY = 0x0002;
+const int WM_MOVE = 0x0003;
 const int WM_SIZE = 0x0005;
+const int WM_CLOSE = 0x0010;
 const int WM_PAINT = 0x000F;
 const int WM_ERASEBKG = 0x0014;
 const int WM_NCCREATE = 0x0081;
 const int WM_NCDESTROY = 0x0082;
+const int WM_NCHITTEST = 0x0084;
 const int WM_NCPAINT = 0x0085;
+const int WM_NCLBUTTONDBLCLK = 0x00A3;
+const int WM_NCRBUTTONDOWN = 0x00A4;
+const int WM_SETICON = 0x0080;
 const int WM_MOUSEMOVE = 0x0200;
 const int WM_LBUTTONDOWN = 0x0201;
 const int WM_LBUTTONUP = 0x0202;
 const int WM_RBUTTONDOWN = 0x0204;
 const int WM_RBUTTONUP = 0x0205;
 const int WM_MOUSEWHEEL = 0x020A;
+const int WM_MOVING = 0x0216;
 const int WM_CTLCOLOREDIT = 0x0133;
 const int WM_SETFONT = 0x0030;
 const int WM_SETFOCUS = 0x0007;
@@ -61,6 +73,7 @@ const long IDC_ARROW = 32512;
 
 const int GWLP_USERDATA = -21;
 const int GWLP_WNDPROC = -4;
+const int GWLP_HWNDPARENT = -8;
 
 const int WHITE_BRUSH           = 0;
 const int LTGRAY_BRUSH          = 1;
@@ -116,6 +129,32 @@ const int VK_LEFT = 0x25;
 const int VK_UP = 0x26;
 const int VK_RIGHT = 0x27;
 const int VK_DOWN = 0x28;
+const int VK_SHIFT = 0x10;
+const int VK_CONTROL = 0x11;
+const int VK_DELETE = 0x2E;
+const int VK_F1 = 0x70;
+const int VK_F2 = 0x71;
+const int VK_F3 = 0x72;
+const int VK_F4 = 0x73;
+const int VK_F5 = 0x74;
+const int VK_F6 = 0x75;
+const int VK_F7 = 0x76;
+const int VK_F8 = 0x77;
+const int VK_F9 = 0x78;
+const int VK_F10 = 0x79;
+const int VK_F11 = 0x7A;
+const int VK_F12 = 0x7B;
+
+const int HTTRANSPARENT = -1;
+const int HTCAPTION = 2;
+const int HTLEFT = 10;
+const int HTRIGHT = 11;
+const int HTTOP = 12;
+const int HTTOPLEFT = 13;
+const int HTTOPRIGHT = 14;
+const int HTBOTTOM = 15;
+const int HTBOTTOMLEFT = 16;
+const int HTBOTTOMRIGHT = 17;
 
 // ChooseColor dialog flags
 const uint CC_RGBINIT = 0x00000001;
@@ -152,16 +191,27 @@ const int MIIM_STRING     = 0x00000040;
 const int MIIM_BITMAP     = 0x00000080;
 const int MIIM_FTYPE      = 0x00000100;
 
-const int MF_STRING = 0x00000000;
-const int MF_SEPARATOR = 0x00000800;
-const int MF_POPUP = 0x00000010;
+const int MF_STRING     = 0x00000000;
+const int MF_SEPARATOR  = 0x00000800;
+const int MF_POPUP      = 0x00000010;
+const int MF_BYCOMMAND  = 0x00000000;
+const int MF_UNCHECKED  = 0x00000000;
+const int MF_CHECKED    = 0x00000008;
+const int MF_ENABLED    = 0x00000000;
+const int MF_GRAYED     = 0x00000001;
+
+const int MFT_RADIOCHECK = 0x00000200;
 
 const int ODS_SELECTED  = 0x0001;
 const int ODS_HOTLIGHT  = 0x0040;
 const int ODS_NOACCEL   = 0x0100;
 
+const int DT_LEFT       = 0x00000000;
 const int DT_CENTER     = 0x00000001;
+const int DT_RIGHT      = 0x00000002;
+const int DT_TOP        = 0x00000000;
 const int DT_VCENTER    = 0x00000004;
+const int DT_BOTTOM     = 0x00000008;
 const int DT_WORDBREAK  = 0x00000010;
 const int DT_SINGLELINE = 0x00000020;
 const int DT_CALCRECT   = 0x00000400;
@@ -172,6 +222,16 @@ const int DT_WORD_ELLIPSIS = 0x00040000;
 
 const int SM_CXSCREEN  = 0;
 const int SM_CYSCREEN  = 1;
+
+const int TPM_RIGHTBUTTON = 0x0002;
+const int TPM_RETURNCMD = 0x0100;
+
+const uint SCK_CONTROL = 1U<<30U;
+const uint SCK_SHIFT = 1U<<31U;
+
+const int ICON_SMALL = 0;
+const int ICON_BIG = 1;
+
 
 struct WNDCLASSA
 {
@@ -381,6 +441,11 @@ int AppendMenuA(long hMenu, uint uFlags, ulong uIDNewItem, byte* lpNewItem) exte
 long SetMenu(long hWnd, long hMenu) external;
 int DrawMenuBar(long hWnd) external;
 int GetSystemMetrics(int nIndex) external;
+int TrackPopupMenu(long hMenu, uint uFlags, int x, int y, int nReserved, long hWnd, RECT *prcRect) external;
+int GetCursorPos(POINT* lpPoint) external;
+uint GetAsyncKeyState(int vKey) external;
+long CreateIconFromResourceEx(byte *pbIconBits, uint cbIconBits, int fIcon, uint dwVersion, int cxDesired, int cyDesired, uint uFlags) external;
+void DestroyIcon(long hIcon) external;
 
 int MulDiv(int x, int y, int z)
 {
@@ -560,6 +625,31 @@ class Bitmap
     int height = 0;
     int bitsPerPixel = 0;
     void* pBits = null;
+    string filepath;
+
+    string get Path() => filepath;
+    void set Path(string value)
+    {
+        file f = file.open(value, "rb");
+
+        if(f == null)
+        {
+            Log("Bitmap: Failed to open file: %s", value);
+            return;
+        }
+
+        if(hBitmap != 0)
+        {
+            DeleteObject(hBitmap);
+            hBitmap = 0;
+        }
+
+        Stream s = new FileStream(f);
+        if(LoadFromStream(this, s))
+        {
+            filepath = value;
+        }
+    }
 
     Bitmap constructor()
     {
@@ -574,6 +664,7 @@ class Bitmap
             DeleteObject(hBitmap);
             hBitmap = 0;
         }
+        pBits = null;
     }
 
     static Bitmap FromSizeAndFormat(int width, int height, int bitsPerPixel)
@@ -619,7 +710,7 @@ class Bitmap
             return null;
         }
 
-        Log("Bitmap created: %dx%d, %dbpp, handle: %lx", width, height, bitsPerPixel, bitmap.hBitmap);
+        //Log("Bitmap created: %dx%d, %dbpp, handle: %lx", width, height, bitsPerPixel, bitmap.hBitmap);
         return bitmap;
     }
 
@@ -635,10 +726,15 @@ class Bitmap
         }
 
         Stream s = new FileStream(f);
-        return FromStream(s);
+        Bitmap bitmap = FromStream(s);
+        if(bitmap != null)
+        {
+            bitmap.filepath = filename;
+        }
+        return bitmap;
     }
 
-    static Bitmap FromStream(Stream s)
+    private static bool LoadFromStream(Bitmap bitmap, Stream s)
     {
         ushort bfType;
         uint bfSize;
@@ -655,7 +751,7 @@ class Bitmap
         if(bfType != 0x4D42)
         {
             Log("Bitmap: Not a valid BMP file");
-            return null;
+            return false;
         }
 
         // Read info header
@@ -663,18 +759,16 @@ class Bitmap
         if(s.Read(&infoHeader, sizeof(infoHeader)) == 0)
         {
             Log("Bitmap: Failed to read info header");
-            return null;
+            return false;
         }
 
         // Validate bit depth
         if(infoHeader.biBitCount != 24 && infoHeader.biBitCount != 32)
         {
             Log("Bitmap: Unsupported bit depth: %d", infoHeader.biBitCount);
-            return null;
+            return false;
         }
 
-        // Create bitmap
-        Bitmap bitmap = new Bitmap();
         bitmap.width = infoHeader.biWidth;
         bitmap.height = infoHeader.biHeight > 0 ? infoHeader.biHeight : -infoHeader.biHeight;
         bitmap.bitsPerPixel = infoHeader.biBitCount;
@@ -703,7 +797,7 @@ class Bitmap
         if(bitmap.hBitmap == 0)
         {
             Log("Bitmap: Failed to create DIB section for %dbpp", bitmap.bitsPerPixel);
-            return null;
+            return false;
         }
 
         // Calculate row size (must be multiple of 4)
@@ -725,6 +819,7 @@ class Bitmap
             Log("Bitmap: Failed to read pixel data");
             memory.free(tempBuffer);
             DeleteObject(bitmap.hBitmap);
+            bitmap.hBitmap = 0;
             return null;
         }
 
@@ -776,7 +871,15 @@ class Bitmap
 
         memory.free(tempBuffer);
 
-        return bitmap;
+        return true;
+    }
+
+    static Bitmap FromStream(Stream s)
+    {
+        Bitmap bitmap = new Bitmap();
+        if(LoadFromStream(bitmap, s))
+            return bitmap;
+        return null;
     }
 
     void* get PixelData()
@@ -797,6 +900,88 @@ class Bitmap
     int get BitsPerPixel()
     {
         return bitsPerPixel;
+    }
+}
+
+class Icon
+{
+    long hIcon;
+    string filepath;
+   
+    string get Path() => filepath;
+    void set Path(string value)
+    {
+        file f = file.open(value, "rb");
+        if(f != null)
+        {
+            FileStream fs = new FileStream(f);
+            if(LoadFromStream(fs))
+            {
+                filepath = value;
+            }
+        }
+    }
+
+    void destructor()
+    {
+        if(hIcon != 0)
+            DestroyIcon(hIcon);
+    }
+
+    bool LoadFromStream(Stream s)
+    {
+        s.Seek(0, SeekPos.End);
+        int size = s.Position;
+        s.Seek(0, SeekPos.Start);
+        byte* pngData = memory.alloc(size);
+        s.Read(pngData, size);
+        hIcon = CreateIconFromResourceEx(
+            pngData,
+            size,
+            true,
+            0x00030000,
+            0,
+            0,
+            0x0000 /*LR_DEFAULTCOLOR*/);
+        return hIcon != 0;
+    }
+
+    static Icon FromStream(Stream s)
+    {
+        Icon icon = new Icon();
+        if(icon.LoadFromStream(s))
+            return icon;
+    }
+
+    static Icon FromFile(string fileName)
+    {
+        file f = file.open(fileName, "rb");
+        if(f == null)
+            return null;
+        FileStream fs = new FileStream(f);
+        Icon icon = FromStream(fs);
+        if(icon != null)
+            icon.filepath = fileName;
+        return icon;
+        /*f.seek(0, SeekPos.End);
+        int size = f.position;
+        f.seek(0, SeekPos.Start);
+        byte* pngData = memory.alloc(size);
+        f.read(pngData, size);
+        f.close();
+
+        Icon icon = new Icon();
+
+        icon.hIcon = CreateIconFromResourceEx(
+            pngData,
+            size,
+            true,
+            0x00030000,
+            0,
+            0,
+            0x0000 LR_DEFAULTCOLOR);
+
+        return icon;*/
     }
 }
 
@@ -1092,6 +1277,24 @@ class Application
         MSG msg = {};
         while (GetMessageA(&msg, null, 0, 0))
         {
+            if(msg.message == WM_KEYDOWN)
+            {
+                if(Window.activeWindow != null)
+                {
+                    Menu menu = Window.activeWindow.Menu;
+                    if(menu != null)
+                    {
+                        uint shortCut = msg.wParam;
+                        if(GetAsyncKeyState(VK_CONTROL) & 0x8000)
+                            shortCut |= SCK_CONTROL;
+                        if(GetAsyncKeyState(VK_SHIFT) & 0x8000)
+                            shortCut |= SCK_SHIFT;
+                        if(menu.HandleShortcut(shortCut))
+                            continue;
+                    }
+                }
+            }
+
             // Check if this is a keyboard message
             if(msg.message == WM_KEYDOWN || msg.message == WM_KEYUP)
             {

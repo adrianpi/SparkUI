@@ -1,0 +1,101 @@
+{
+    "Children": [
+        {
+            "Children": [
+            ],
+            "Menu": null,
+            "BackColor": 2039583,
+            "Left": 16,
+            "ForeColor": 16777215,
+            "Name": "chkCtrl",
+            "@ClassName": "Checkbox",
+            "Height": 20,
+            "Checked": false,
+            "Enabled": true,
+            "Text": "Ctrl",
+            "Width": 100,
+            "Top": 11,
+            "Visible": true
+        },
+        {
+            "Children": [
+            ],
+            "Menu": null,
+            "BackColor": 2039583,
+            "Left": 16,
+            "ForeColor": 16777215,
+            "Name": "chkShift",
+            "@ClassName": "Checkbox",
+            "Height": 20,
+            "Checked": false,
+            "Enabled": true,
+            "Text": "Shift",
+            "Width": 100,
+            "Top": 39,
+            "Visible": true
+        },
+        {
+            "Children": [
+            ],
+            "Menu": null,
+            "BackColor": 3355443,
+            "Left": 16,
+            "ForeColor": 16777215,
+            "Name": "ddKey",
+            "@ClassName": "Dropdown",
+            "Height": 20,
+            "SelectedItem": null,
+            "Enabled": true,
+            "Text": "",
+            "Width": 100,
+            "Top": 71,
+            "Visible": true
+        },
+        {
+            "Children": [
+            ],
+            "Menu": null,
+            "BackColor": 14120960,
+            "Left": 16,
+            "ForeColor": 16777215,
+            "Name": "btnOK",
+            "@ClassName": "Button",
+            "Height": 30,
+            "Enabled": true,
+            "Text": "OK",
+            "Width": 100,
+            "ModalResult": 1,
+            "Top": 108,
+            "Visible": true
+        },
+        {
+            "Children": [
+            ],
+            "Menu": null,
+            "BackColor": 14120960,
+            "Left": 133,
+            "ForeColor": 16777215,
+            "Name": "btnCancel",
+            "@ClassName": "Button",
+            "Height": 30,
+            "Enabled": true,
+            "Text": "Cancel",
+            "Width": 100,
+            "ModalResult": 2,
+            "Top": 108,
+            "Visible": true
+        }
+    ],
+    "Menu": null,
+    "BackColor": 2039583,
+    "Left": 520,
+    "ForeColor": 16777215,
+    "Name": "ShortcutEditor",
+    "@ClassName": "WindowEditorWindow",
+    "Height": 193,
+    "Enabled": true,
+    "Text": "Shortcut",
+    "Width": 267,
+    "Top": 302,
+    "Visible": true
+}

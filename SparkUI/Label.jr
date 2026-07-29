@@ -1,11 +1,29 @@
 using jargon;
 
+enum TextAlignment
+{
+    Left,
+    Center,
+    Right,
+}
+
+enum VerticalAlignment
+{
+    Top,
+    Center,
+    Bottom,
+}
+
+[DefaultWidth(100)]
+[DefaultHeight(20)]
 class Label : Control
 {
     bool autoSize = false;
     int autoSizeMaxWidth = 0; // 0 = unlimited
     int PaddingX = 0;
     int PaddingY = 0;
+    TextAlignment textAlignment = TextAlignment.Left;
+    VerticalAlignment verticalAlignment = VerticalAlignment.Top;
 
     bool get AutoSize() => autoSize;
     void set AutoSize(bool value)
@@ -20,6 +38,20 @@ class Label : Control
     {
         autoSizeMaxWidth = value;
         AutoSizeToText();
+        Invalidate();
+    }
+
+    TextAlignment get Alignment() => textAlignment;
+    void set Alignment(TextAlignment value)
+    {
+        textAlignment = value;
+        Invalidate();
+    }
+
+    VerticalAlignment get VerticalAlignment() => verticalAlignment;
+    void set VerticalAlignment(VerticalAlignment value)
+    {
+        verticalAlignment = value;
         Invalidate();
     }
 
@@ -113,6 +145,17 @@ class Label : Control
         SetTextColor(hdc, ForeColor);
 
         uint flags = DT_WORDBREAK; // respects '\n' and wrapping
+
+        if(textAlignment == TextAlignment.Center)
+            flags |= DT_CENTER;
+        else if(textAlignment == TextAlignment.Right)
+            flags |= DT_RIGHT;
+
+        if(verticalAlignment == VerticalAlignment.Center)
+            flags |= DT_VCENTER | DT_SINGLELINE;
+        else if(verticalAlignment == VerticalAlignment.Bottom)
+            flags |= DT_BOTTOM | DT_SINGLELINE;
+
         DrawTextA(hdc, Text.c_str(), -1, &rc, flags);
 
         SelectObject(hdc, prevFont);

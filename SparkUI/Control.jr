@@ -1,6 +1,6 @@
 using jargon;
 
-class Control : Window
+class Control : BaseWindow
 {
     Event Enter = new Event();
     Event Leave = new Event();
@@ -46,6 +46,60 @@ class Control : Window
         SetFocus(hWnd);
     }
 
+    /*void OnMouseDown(int button, int x, int y)
+    {
+        if(button == 1)
+        {
+            if(DesignMode)
+            {
+                GetTopLevelParent().SetDesignerSelectedControl(this);
+            }
+        }
+    }*/
+
+    int createX;
+    int createY;
+
+    PopupMenu GetEditMenu()
+    {
+        PopupMenu editMenu = new PopupMenu();
+
+        if(this.getClassType().HasAttribute("AcceptChildren"))
+        {
+            MenuItem miAddChild = new MenuItem();
+            miAddChild.Text = "Add Child";
+            miAddChild.SubMenu = GetTopLevelParent().DesignerGetCreateMenu(this, Control.MiAddChild_Clicked);
+            editMenu.Items.add(miAddChild);
+        }
+
+        MenuItem miDelete = new MenuItem();
+        miDelete.Text = "Delete";
+        miDelete.Clicked += new Delegate(this, Control.MiDelete_Clicked);
+        editMenu.Items.add(miDelete);
+        return editMenu;
+    }
+
+    void MiAddChild_Clicked(object sender, void *param)
+    {
+        MenuItem item = (MenuItem)sender;
+        string clsName = item.Text;
+        GetTopLevelParent().DesignerCreateControl(this, clsName, createX, createY);
+    }
+
+    void MiDelete_Clicked(object sender, void* param)
+    {
+        if(DesignMode)
+        {
+            int index = parent.children.indexOf(this);
+            if(index >= 0)
+            {
+                GetTopLevelParent().DesignerControlDeleted(this);
+                DestroyWindow(hWnd);
+                parent.children.removeAt(index);                
+            }
+        }
+    }
+
     long WndProc(long hwnd, uint uMsg, ulong wParam, ulong lParam)
     {
         if(uMsg == WM_SETFOCUS)
@@ -56,6 +110,120 @@ class Control : Window
         {
             OnLeave();
         }
+        else if(uMsg == WM_MOVE)
+        {
+            x = (int)(short)(lParam & 0xFFFF);
+            y = (int)(short)((lParam >> 16) & 0xFFFF);
+            if(DesignMode)
+            {
+                Invalidate();
+                GetTopLevelParent().DesignerRefreshProperties();
+            }
+            return base(hwnd, uMsg, wParam, lParam);
+        }
+        else if(uMsg == WM_SIZE)
+        {
+            int result = base(hwnd, uMsg, wParam, lParam);
+            if(DesignMode)
+            {
+                GetTopLevelParent().DesignerRefreshProperties();
+            }
+            return result;
+        }
+        else if(uMsg == WM_LBUTTONDOWN)
+        {
+            if(DesignMode)
+            {
+                GetTopLevelParent().SetDesignerSelectedControl(this);
+                return 0;
+            }
+            else
+            {
+                return base(hwnd, uMsg, wParam, lParam);
+            }
+        }
+        else if(uMsg == WM_RBUTTONDOWN || uMsg == WM_NCRBUTTONDOWN)
+        {
+            if(DesignMode)
+            {
+                //GetTopLevelParent().SetDesignerSelectedControl(this);
+                createX = (int)(short)(lParam & 0xFFFF);
+                createY = (int)(short)((lParam >> 16) & 0xFFFF);
+                if(uMsg == WM_NCRBUTTONDOWN)
+                {
+                    POINT q = {createX, createY};
+                    ScreenToClient(hwnd, &q);
+                    createX = q.x;
+                    createY = q.y;
+                }
+                PopupMenu mnu = GetEditMenu();
+                POINT pt;
+                GetCursorPos(&pt);
+                ScreenToClient(GetTopLevelParent().hWnd, &pt);
+                mnu.Show(GetTopLevelParent(), pt.x, pt.y);
+                return 0;
+            }
+            else
+            {
+                return base(hwnd, uMsg, wParam, lParam);
+            }
+        }
+        else if(uMsg == WM_NCLBUTTONDBLCLK)
+        {
+            return 0;
+        }
+        else if(uMsg == WM_NCHITTEST)
+        {
+            if(DesignMode && GetTopLevelParent().GetDesignerSelectedControl() == this)
+            {
+                POINT pt;
+                pt.x = (int)(short)(lParam & 0xFFFF);
+                pt.y = (int)(short)((lParam >> 16) & 0xFFFF);
+                ScreenToClient(hwnd, &pt);
+                if(pt.x > Width - 4)
+                    return HTRIGHT;
+                else if(pt.x < 4)
+                    return HTLEFT;
+                else if(pt.y > Height - 4)
+                    return HTBOTTOM;
+                else if(pt.y < 4)
+                    return HTTOP;
+                else
+                    return HTCAPTION;
+            }
+            else
+                return base(hwnd, uMsg, wParam, lParam);
+        }
+        /*else if(uMsg == WM_MOVING)
+        {
+            if(DesignMode)
+            {
+                RECT* rc = (RECT*)lParam;
+
+                const int grid = 4;
+
+                int x = rc.left;
+                int y = rc.top;
+
+                x = (x / grid) * grid;
+                y = (y / grid) * grid;
+
+                int width  = rc.right - rc.left;
+                int height = rc.bottom - rc.top;
+
+                rc.left   = x;
+                rc.top    = y;
+                rc.right  = x + width;
+                rc.bottom = y + height;
+
+                return 1;
+            }
+            else
+            {
+                return base(hwnd, uMsg, wParam, lParam);
+            }
+        }*/
+
         else
         {
             return base(hwnd, uMsg, wParam, lParam);

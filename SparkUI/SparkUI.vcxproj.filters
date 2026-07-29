@@ -20,5 +20,7 @@
     <None Include="Window.jr" />
     <None Include="Dialogs.jr" />
     <None Include="PropertyGrid.jr" />
+    <None Include="Treeview.jr" />
+    <None Include="WindowEditor.jr" />
   </ItemGroup>
 </Project>

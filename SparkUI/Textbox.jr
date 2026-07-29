@@ -1,5 +1,9 @@
 using jargon;
 
+const int ES_AUTOHSCROLL = 0x0080;
+
+[DefaultWidth(100)]
+[DefaultHeight(20)]
 class Textbox : Control
 {
     Event TextChanged = new Event();
@@ -41,7 +45,7 @@ class Textbox : Control
 
     uint GetWindowStyle()
     {
-        return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
+        return WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL;
     }
 
     void RegisterClass()
@@ -85,7 +89,69 @@ class Textbox : Control
             {
                 textbox.OnLeave();
             }
+            else if(uMsg == WM_MOVE)
+            {
+                textbox.x = (int)(short)(lParam & 0xFFFF);
+                textbox.y = (int)(short)((lParam >> 16) & 0xFFFF);
+                if(textbox.DesignMode)
+                {
+                    textbox.Invalidate();
+                    textbox.GetTopLevelParent().DesignerRefreshProperties();
+                }
+            }
+            else if(uMsg == WM_LBUTTONDOWN)
+            {
+                if(textbox.DesignMode)
+                {
+                    textbox.GetTopLevelParent().SetDesignerSelectedControl(textbox);
+                    return 0;
+                }
+            }        
+            else if(uMsg == WM_RBUTTONDOWN || uMsg == WM_NCRBUTTONDOWN)
+            {
+                if(textbox.DesignMode)
+                {
+                    //GetTopLevelParent().SetDesignerSelectedControl(this);
+                    PopupMenu mnu = textbox.GetEditMenu();
+                    POINT pt;
+                    GetCursorPos(&pt);
+                    ScreenToClient(textbox.GetTopLevelParent().hWnd, &pt);
+                    mnu.Show(textbox.GetTopLevelParent(), pt.x, pt.y);
+                    return 0;
+                }
+            }
+            else if(uMsg == WM_NCLBUTTONDBLCLK)
+            {
+                return 0;
+            }
+            else if(uMsg == WM_NCHITTEST && textbox.GetTopLevelParent().GetDesignerSelectedControl() == textbox)
+            {
+                if(textbox.DesignMode)
+                {
+                    POINT pt;
+                    pt.x = (int)(short)(lParam & 0xFFFF);
+                    pt.y = (int)(short)((lParam >> 16) & 0xFFFF);
+                    ScreenToClient(hwnd, &pt);
+                    if(pt.x > textbox.Width - 4)
+                        return HTRIGHT;
+                    else if(pt.x < 4)
+                        return HTLEFT;
+                    else if(pt.y > textbox.Height - 4)
+                        return HTBOTTOM;
+                    else if(pt.y < 4)
+                        return HTTOP;
+                    else
+                        return HTCAPTION;
+                }
+                //else
+                //    return base(hwnd, uMsg, wParam, lParam);
+            }
+            else if(uMsg == WM_SIZE)
+            {
+                textbox.width = (int)(short)(lParam & 0xFFFF);
+                textbox.height = (int)(short)((lParam >> 16) & 0xFFFF);
 
+            }
             // Chain to original EDIT window procedure
             return CallWindowProcA(textbox.originalWndProc, hwnd, uMsg, wParam, lParam);
         }

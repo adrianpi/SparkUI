@@ -1,5 +1,7 @@
 using jargon;
 
+[DefaultWidth(100)]
+[DefaultHeight(20)]
 class Dropdown : Control
 {
     PopupWindow popup = null;
@@ -13,9 +15,29 @@ class Dropdown : Control
         return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
     }
 
+    [Browsable(false)]
     object get SelectedItem()
     {
         return listbox.SelectedItem;
+    }
+
+    void set SelectedItem(object value)
+    {
+        int index = Items.items.indexOf(value);
+        if(index >= 0)
+        {
+            listbox.SelectedIndex = index;
+            Text = value.toString();
+        }
+    }
+    
+    [Browsable(false)]
+    int get SelectedIndex() => listbox.SelectedIndex;
+    void set SelectedIndex(int value)
+    {
+        listbox.SelectedIndex = value;
+        if(value >= 0 && value < Items.Count)
+            Text = Items.items[value].toString();
     }
 
     Dropdown constructor(Window parent, int x, int y, int width, int height)
@@ -25,6 +47,7 @@ class Dropdown : Control
         BackColor = 0x333333;
 
         popup = new PopupWindow(parent, 0, 0, width, 162);
+        popup.Text = "Dropdown Popup";
         listbox = new Listbox(popup, 0, 0, width, 162);
         listbox.Leave += new Delegate(this, Dropdown.Listbox_OnLeave);
         Items = listbox.Items;
@@ -33,11 +56,48 @@ class Dropdown : Control
         return this;
     }
 
+    void RecreatePopup()
+    {
+        PopupWindow newPopup = new PopupWindow(parent, 0, 0, width, 162);
+        newPopup.Text = "Dropdown Popup";
+        Listbox newListbox = new Listbox(newPopup, 0, 0, width, 162);
+        newListbox.Leave += new Delegate(this, Dropdown.Listbox_OnLeave);
+        ListItems newItems = newListbox.Items;
+        newListbox.Clicked += new Delegate(this, Dropdown.Listbox_Clicked);
+        newListbox.Confirmed += new Delegate(this, Dropdown.Listbox_Clicked);
+
+        for(int i = 0; i < Items.Count; ++i)
+        {
+            newItems.Add(Items.items[i]);
+        }
+
+        Items.Destroy();
+        listbox.Destroy();
+        popup.Destroy();
+
+        popup = newPopup;
+        listbox = newListbox;
+        Items = newItems;
+    }
+
+    void OnDestroy()
+    {
+        popup.Destroy();
+    }
+
+    uint GetForeColor()
+    {
+        if(!Enabled)
+            return WindowDefaults.WindowForeColorDisabled;
+        else
+            return ForeColor;
+    }
+
     void OnPaint(Canvas canvas)
     {
         canvas.FillRectangle(0, 0, width, height, backBrush);
         canvas.DrawBitmap(width - 16, (height - 16) / 2, 16, 16, WindowDefaults.DropdownArrow);
-        canvas.DrawText(2, 1, Text, this.Font, ForeColor);
+        canvas.DrawText(2, 1, Text, this.Font, GetForeColor());
         if(HasFocus())
         {
             RECT fr = {0, 0, width, height};
@@ -61,6 +121,11 @@ class Dropdown : Control
                 dropping = true;
                 POINT pt = {this.x, this.y + height};
                 ClientToScreen(parent.hWnd, &pt);
+                if(popup.parent != parent)
+                {
+                    // Cannot change ownership of a window. Recreate.
+                    RecreatePopup();
+                }
                 popup.SetPosition(pt.x, pt.y);
                 popup.Visible = true;
                 int width = listbox.width;
@@ -79,8 +144,9 @@ class Dropdown : Control
                 {
                     listbox.Items.topIndex = 0;
                     listbox.vscroll.Position = 0;
-                    listbox.SetSize(listbox.width, Items.Count * 20+2);
-                    popup.SetSize(popup.width, Items.Count * 20 + 2);
+                    int cnt = Items.Count >? 1;
+                    listbox.SetSize(listbox.width, cnt * 20+2);
+                    popup.SetSize(popup.width, cnt * 20 + 2);
                 }
                 EnableWindow(popup.hWnd, true);
                 listbox.Focus();
@@ -129,9 +195,21 @@ class Dropdown : Control
 
     void Listbox_OnLeave(object sender, void *param)
     {
-        popup.Visible = false;
-        EnableWindow(popup.hWnd, false);
-        SetActiveWindow(parent.hWnd);
-        Focus();
+        PostMessageA(hWnd, WM_USER+101, 0, 0);
+    }
+
+    long WndProc(long hwnd, uint uMsg, ulong wParam, ulong lParam)
+    {
+        if(uMsg == WM_USER+101)
+        {
+            popup.Visible = false;
+            EnableWindow(popup.hWnd, false);
+            SetActiveWindow(parent.hWnd);
+            Focus();
+        }
+        else
+        {
+            return base(hwnd, uMsg, wParam, lParam);
+        }
     }
 }

@@ -1,5 +1,7 @@
 using jargon;
 
+[DefaultWidth(100)]
+[DefaultHeight(20)]
 class Checkbox : Control
 {
     Event Clicked = new Event();
@@ -24,14 +26,12 @@ class Checkbox : Control
         return this;
     }
 
-    void OnEnabled()
+    uint GetForeColor()
     {
-        ForeColor = WindowDefaults.WindowForeColor;
-    }
-
-    void OnDisabled()
-    {
-        ForeColor = WindowDefaults.WindowForeColorDisabled;
+        if(!Enabled)
+            return WindowDefaults.WindowForeColorDisabled;
+        else
+            return ForeColor;
     }
 
     void OnPaint(Canvas canvas)
@@ -39,7 +39,7 @@ class Checkbox : Control
         canvas.DrawBitmap(0, 0, 16, 16, Checked ? WindowDefaults.CheckboxChecked : WindowDefaults.CheckboxUnchecked);
         if(!Enabled)
             canvas.DrawBitmap(0, 0, 16, 16, WindowDefaults.CheckboxDim);
-        canvas.DrawText(20, 0, Text, this.Font, ForeColor);
+        canvas.DrawText(20, 0, Text, this.Font, GetForeColor());
         if(HasFocus())
         {
             SIZE sz = canvas.MeasureText(Text, this.Font);

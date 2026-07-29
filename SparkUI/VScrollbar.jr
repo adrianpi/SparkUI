@@ -1,5 +1,7 @@
 using jargon;
 
+[DefaultWidth(16)]
+[DefaultHeight(100)]
 class VScrollbar : Scrollbar
 {
     VScrollbar constructor(Window parent, int x, int y, int width, int height)
@@ -149,6 +151,21 @@ class VScrollbar : Scrollbar
                     Scrolled.invoke(this, null);
                 }
             }
+        }
+    }
+
+    long WndProc(long hwnd, uint uMsg, ulong wParam, ulong lParam)
+    {
+        if(uMsg == WM_NCHITTEST)
+        {
+            if(DesignMode && parent != GetTopLevelParent())
+                return HTTRANSPARENT;
+            else
+                return base(hwnd, uMsg, wParam, lParam);
+        }
+        else
+        {
+            return base(hwnd, uMsg, wParam, lParam);
         }
     }
 }

@@ -1,10 +1,16 @@
 using jargon;
 
+[DefaultWidth(100)]
+[DefaultHeight(30)]
 class Button : Control
 {
-    int ModalResult = -1;
+    int modalResult = -1;
+    bool inside = false;
 
     Event Clicked = new Event();
+
+    int get ModalResult() => modalResult;
+    void set ModalResult(int value) => modalResult = value;
 
     Button constructor(Window parent, int x, int y, int width, int height)
     {
@@ -19,24 +25,33 @@ class Button : Control
         return WS_CHILD | WS_VISIBLE | WS_TABSTOP;
     }
 
-    void OnEnabled()
-    {
-        BackColor = WindowDefaults.ButtonBackColor;
-    }
-
-    void OnDisabled()
-    {
-        BackColor = WindowDefaults.ButtonBackColorDisabled;
-    }
-
     void OnMouseEnter()
     {
-        BackColor = WindowDefaults.ButtonBackColorActive;
+        inside = true;
+        Invalidate();
     }
 
     void OnMouseLeave()
     {
-        BackColor = WindowDefaults.ButtonBackColor;
+        inside = false;
+        Invalidate();
+    }
+
+    protected uint GetBackColor()
+    {
+        if(!Enabled)
+            return WindowDefaults.ButtonBackColorDisabled;
+        else if(inside)
+            return WindowDefaults.ButtonBackColorActive;
+        else
+            return BackColor;
+    }
+
+    void OnPaintBackground(Canvas canvas)
+    {
+        RECT r = ClientRect;
+        Brush backBrush = new Brush(GetBackColor());
+        canvas.FillRectangle(0, 0, r.right, r.bottom, backBrush);
     }
 
     void OnPaint(Canvas canvas)
@@ -66,15 +81,15 @@ class Button : Control
     {
         Clicked.invoke(this, null);
 
-        if(ModalResult != -1)
+        if(modalResult != -1)
         {
-            Window w = parent;
+            BaseWindow w = parent;
             while(w)
             {
                 if(w is Dialog)
                 {
                     Dialog d = w as Dialog;
-                    d.ModalResult = ModalResult;
+                    d.ModalResult = modalResult;
                     d.Close();
                     break;
                 }

@@ -1,14 +1,38 @@
 using jargon;
 
+enum ListboxStyle
+{
+    Normal = 0,
+    OwnerDraw = 1,
+}
+
+class DrawItemInfo
+{
+    int index;
+    int left;
+    int top;
+    int width;
+    int height;
+    bool selected;
+    Canvas canvas;
+}
+
+[SerializeSkip("Children,SelectedIndex")]
+[DefaultWidth(150)]
+[DefaultHeight(150)]
 class Listbox : Control
 {
     VScrollbar vscroll;
     ListItems Items;
     int selectedIndex = -1;
+    ListboxStyle style = ListboxStyle.Normal;
+
     Event SelectedIndexChanged = new Event();
     Event Clicked = new Event();
     Event Confirmed = new Event();
+    Event DrawItem = new Event();
 
+    [Browsable(false)]
     int get SelectedIndex() => selectedIndex;
     void set SelectedIndex(int value)
     {
@@ -18,7 +42,7 @@ class Listbox : Control
             if(selectedIndex > -1)
             {
                 int itemHeight = 20;
-                int numVisible = height / itemHeight;
+                int numVisible = Items.height / itemHeight;
                 if(selectedIndex < Items.topIndex)
                     Items.topIndex = selectedIndex;
                 else if(selectedIndex > Items.topIndex + numVisible - 1)
@@ -27,6 +51,13 @@ class Listbox : Control
             } 
             Items.Invalidate();
         }
+    }
+
+    ListboxStyle get Style() => style;
+    void set Style(ListboxStyle value)
+    {
+        style = value;
+        Items.Invalidate();
     }
 
     object get SelectedItem()
@@ -57,12 +88,14 @@ class Listbox : Control
 
     void OnEnabled()
     {
-        Items.Invalidate();
+        if(Items != null)
+            Items.Invalidate();
     }
 
     void OnDisabled()
     {
-        Items.Invalidate();
+        if(Items != null)
+            Items.Invalidate();
     }
 
     void VScroll_Scrolled(object sender, void* args)
@@ -111,7 +144,7 @@ class Listbox : Control
         else if(key == VK_PAGE_UP) // Page Up
         {
             int itemHeight = 20;
-            int numVisible = height / itemHeight;
+            int numVisible = Items.height / itemHeight;
             if(selectedIndex > 0)
             {
                 SelectedIndex = (selectedIndex - numVisible) >? 0;
@@ -122,7 +155,7 @@ class Listbox : Control
         else if(key == VK_PAGE_DOWN) // Page Down
         {
             int itemHeight = 20;
-            int numVisible = height / itemHeight;
+            int numVisible = Items.height / itemHeight;
             if(selectedIndex < Items.Count - 1)
             {
                 SelectedIndex = (selectedIndex + numVisible) <? (Items.Count - 1);
@@ -161,7 +194,7 @@ class Listbox : Control
         vscroll.SetSize(16, height - 2);
         Items.SetSize(width - 16 - 2, height - 2);
         int itemHeight = 20;
-        int numVisible = height / itemHeight;
+        int numVisible = Items.height / itemHeight;
         vscroll.MaxValue = (Items.Count - numVisible) >? 0;        
         vscroll.PageSize = numVisible;
         vscroll.Invalidate();

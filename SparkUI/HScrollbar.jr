@@ -1,5 +1,7 @@
 using jargon;
 
+[DefaultWidth(100)]
+[DefaultHeight(16)]
 class HScrollbar : Scrollbar
 {
     HScrollbar constructor(Window parent, int x, int y, int width, int height)

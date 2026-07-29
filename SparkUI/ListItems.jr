@@ -48,6 +48,28 @@ class ListItems : Control
         }
     }
 
+    void RemoveAt(int index)
+    {
+        if(index >= 0 && index < items.count)
+        {
+            items.removeAt(index);
+            Listbox listbox = (Listbox)parent;
+            listbox.vscroll.MaxValue = (items.count - (this.height / 20)) >? 0;
+            int itemHeight = 20;
+            if(listbox.selectedIndex >= items.count)
+            {
+                listbox.selectedIndex = items.count - 1;                
+            }
+            if(listbox.selectedIndex < topIndex)
+                topIndex = listbox.selectedIndex >? 0;
+            listbox.vscroll.Position = topIndex;
+            topIndex = listbox.vscroll.Position;
+            Invalidate();
+            listbox.vscroll.Invalidate();
+            listbox.SelectedIndexChanged.invoke(listbox, null);
+        }
+    }
+
     void Clear()
     {
         items.clear();
@@ -83,12 +105,27 @@ class ListItems : Control
             int itemIndex = topIndex + i;
             if(itemIndex >= items.count)
                 break;
-            if(itemIndex == listbox.selectedIndex)
+            if(listbox.style == ListboxStyle.Normal)
             {
-                canvas.FillRectangle(0, i * itemHeight, width, itemHeight, new Brush(0xaa5555));
+                if(itemIndex == listbox.selectedIndex)
+                {
+                    canvas.FillRectangle(0, i * itemHeight, width, itemHeight, new Brush(0xaa5555));
+                }
+                string text = items[itemIndex].toString();
+                canvas.DrawText(2, i * itemHeight + 1, text, this.Font, listbox.Enabled ? ForeColor : WindowDefaults.WindowForeColorDisabled);
             }
-            string text = items[itemIndex].toString();
-            canvas.DrawText(2, i * itemHeight + 1, text, this.Font, listbox.Enabled ? ForeColor : WindowDefaults.WindowForeColorDisabled);
+            else
+            {
+                DrawItemInfo info = new DrawItemInfo();
+                info.index = itemIndex;
+                info.left = 0;
+                info.top = i * itemHeight;
+                info.width = width;
+                info.height = itemHeight;
+                info.selected = (itemIndex == listbox.selectedIndex);
+                info.canvas = canvas;
+                listbox.DrawItem.invoke(listbox, info);
+            }
         }
     }
 
@@ -133,6 +170,21 @@ class ListItems : Control
                 topIndex = listbox.vscroll.Position;
                 Invalidate();
             }
+        }
+    }
+
+    long WndProc(long hwnd, uint uMsg, ulong wParam, ulong lParam)
+    {
+        if(uMsg == WM_NCHITTEST)
+        {
+            if(DesignMode)
+                return HTTRANSPARENT;
+            else
+                return base(hwnd, uMsg, wParam, lParam);
+        }
+        else
+        {
+            return base(hwnd, uMsg, wParam, lParam);
         }
     }
 }

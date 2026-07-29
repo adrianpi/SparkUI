@@ -1,5 +1,8 @@
 using jargon;
 
+[DefaultWidth(150)]
+[DefaultHeight(150)]
+[AcceptChildren]
 class Panel : Control
 {
     bool border = true;

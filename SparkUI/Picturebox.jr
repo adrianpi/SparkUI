@@ -1,5 +1,7 @@
 using jargon;
 
+[DefaultWidth(150)]
+[DefaultHeight(150)]
 class Picturebox : Panel
 {
     Bitmap bitmap;

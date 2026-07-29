@@ -1,5 +1,6 @@
 using jargon;
 using SparkUI;
+using JargonJson;
 
 resource sparkUI32 "SPARKUI32.BMP";
 
@@ -41,6 +42,31 @@ struct Point
     int y;
 }
 
+struct Composite
+{
+    int index;
+    Point pt;
+}
+
+class Collectable
+{
+    string name;
+    int age;
+
+    string get Name() => name;
+    void set Name(string value) => name = value;
+
+    int get Age() => age;
+    void set Age(int value) => age = value;
+}
+
+class Collectable2 : Collectable
+{
+    string description;
+    string get Description() => description;
+    void set Description(string value) => description = value;
+}
+
 class TestClass
 {
     int intValue = 42;
@@ -55,6 +81,8 @@ class TestClass
     Bitmap bitmap = null;
     string fileName = null;
     Point position;
+    Composite composite;
+    array<Collectable> collectables = new array<Collectable>();
     int get IntValue() => intValue;
     void set IntValue(int value) => intValue = value;
     float get FloatValue() => floatValue;
@@ -91,18 +119,25 @@ class TestClass
     {
         position = value;
     }
+    Composite get CompositeValue() => composite;
+    void set CompositeValue(Composite value)
+    {
+        composite = value;
+    }
+    [AcceptTypes("Collectable,Collectable2")]
+    array<Collectable> get Collectables() => collectables;
 }
 
-class PointPropertyEditor : TextEditor
+class PointPropertyEditor : TextPropertyEditor
 {
-    string GetStringValue(object obj, RTTIProperty prop)
+    string GetStringValue(PropertyGridValue prop)
     {
-        Point (*getter)(object) = prop.getter.function.address;
-        Point value = getter(obj);
+        Point value;
+        prop.GetStructValue(sizeof(value), &value);
         return string.format("%d, %d", value.x, value.y);
     }
 
-    bool SetStringValue(object obj, RTTIProperty prop, string value)
+    bool SetStringValue(PropertyGridValue prop, string value)
     {
         array<string> parts = value.split(",");
         if(parts.count != 2)
@@ -113,8 +148,7 @@ class PointPropertyEditor : TextEditor
         if(!parse_int(parts[1].c_str(), &y))
             return false;
         Point v = {x, y};
-        void (*setter)(object, Point) = prop.setter.function.address;
-        setter(obj, v);
+        prop.SetStructValue(sizeof(v), &v);
         return true;
     }
 }
@@ -149,10 +183,13 @@ class MyWindow : Window
     Textbox textbox2 = null;
     PropertyGrid propertyGrid = null;
     TestClass testObject = new TestClass();
+    Button btnEditor = null;
+    Treeview treeView = null;
 
     void OnCreate()
     {
-        PropertyEditor.RegisterEditor("Point", "PointPropertyEditor");
+        //PropertyEditor.RegisterEditor("Point", "PointPropertyEditor");
+        
         // Create a test bitmap (100x100 32bpp RGBA)
         /*testBitmap = Bitmap.FromSize(100, 100, 32);
 
@@ -179,39 +216,55 @@ class MyWindow : Window
         testBitmap2 = Bitmap.FromStream(GetResourceStream(sparkUI32, sizeof(sparkUI32)));
 
         label1 = new Label(this, 10, 10, 200, 30);
+        label1.Name = "label1";
         label1.Text = "Label1";
 
         button1 = new Button(this, 10, 50, 100, 30);
+        button1.Name = "button1";
         button1.Text = "Button1";
         button1.Clicked += new Delegate(this, MyWindow.Button1_Clicked);
 
         button2 = new Button(this, 10, 90, 100, 30);
+        button2.Name = "button2";
         button2.Text = "Button2";
         button2.Clicked += new Delegate(this, MyWindow.Button2_Clicked);
 
         button3 = new Button(this, 120, 90, 100, 30);
+        button3.Name = "button3";
         button3.Text = "Button3";
         button3.Clicked += new Delegate(this, MyWindow.Button3_Clicked);
 
+        btnEditor = new Button(this, 120, 50, 100, 30);
+        btnEditor.Name = "btnEditor";
+        btnEditor.Text = "Editor";
+        btnEditor.Clicked += new Delegate(this, MyWindow.btnEditor_Clicked);
+
         checkbox1 = new Checkbox(this, 10, 130, 100, 20);
+        checkbox1.Name = "checkbox1";
         checkbox1.Text = "Checkbox1";
 
         checkbox2 = new Checkbox(this, 10, 150, 100, 20);
+        checkbox2.Name = "checkbox2";
         checkbox2.Text = "Checkbox2";
 
         radio1 = new Radiobutton(this, 10, 170, 100, 20);
+        radio1.Name = "radio1";
         radio1.Text = "Radiobutton1";
 
         radio2 = new Radiobutton(this, 10, 190, 100, 20);
+        radio2.Name = "radio2";
         radio2.Text = "Radiobutton2";
 
         vscroll = new VScrollbar(this, 10, 210, 16, 150); 
+        vscroll.Name = "vscroll";
         vscroll.Scrolled += new Delegate(this, MyWindow.VScroll_Scrolled);
 
         hscroll = new HScrollbar(this, 30, 210, 150, 16);
+        hscroll.Name = "hscroll";
         hscroll.Scrolled += new Delegate(this, MyWindow.HScroll_Scrolled);
 
         listbox = new Listbox(this, 200, 210, 200, 202);
+        listbox.Name = "listbox";
 
         for(int i = 0; i < 50; ++i)
         {
@@ -221,36 +274,71 @@ class MyWindow : Window
         listbox.SelectedIndexChanged += new Delegate(this, MyWindow.Listbox_SelectedIndexChanged);
 
         button4 = new Button(this, 410, 210, 20, 20);
+        button4.Name = "button4";
         button4.Text = "-";
         button4.Clicked += new Delegate(this, MyWindow.Button4_Clicked);
 
         button5 = new Button(this, 410, 230, 20, 20);
+        button5.Name = "button5";
         button5.Text = "+";
         button5.Clicked += new Delegate(this, MyWindow.Button5_Clicked);
 
         button6 = new Button(this, 410, 260, 20, 20);
+        button6.Name = "button6";
         button6.Text = "(-)";
         button6.Clicked += new Delegate(this, MyWindow.Button6_Clicked);
 
         button7 = new Button(this, 410, 280, 20, 20);
+        button7.Name = "button7";
         button7.Text = "(+)";
         button7.Clicked += new Delegate(this, MyWindow.Button7_Clicked);
 
         dropdown = new Dropdown(this, 200, 170, 200, 20);
+        dropdown.Name = "dropdown";
         dropdown.Text = "Dropdown";
 
         panel = new Panel(this, 440, 210, 200, 200);
+        panel.Name = "panel";
 
         propertyGrid = new PropertyGrid(this, 650, 210, 200, 200);
-        //propertyGrid.SelectedObject = testObject;
-        propertyGrid.SelectedObject = propertyGrid;
+        propertyGrid.Name = "propertyGrid";
+        propertyGrid.SelectedObject = testObject;
+
+        treeView = new Treeview(this, 690, 10, 200, 200);
+        /*TreeNode node = treeView.AddNode("Root 1");
+        TreeNode child1 = node.AddNode("Child 1");
+        TreeNode child2 = node.AddNode("Child 2");
+        TreeNode node2 = treeView.AddNode("Root 2");
+        TreeNode child3 = node2.AddNode("Child 3");
+        TreeNode child4 = node2.AddNode("Child 4");
+        child2.AddNode("Grand Child 1");
+        child2.AddNode("Grand Child 2");
+        child2.AddNode("Grand Child 3");
+        child3.AddNode("Grand Child 4");
+        child3.AddNode("Grand Child 5");*/
+        for(int i = 0; i < 100; ++i)
+        {
+            TreeNode node = treeView.AddNode(string.format("Node %d", i));
+            for(int j = 0; j < 3; ++j)
+            {
+                TreeNode child = node.AddNode(string.format("Child %d-%d", i, j));
+                for(int k = 0; k < 3; ++k)
+                {
+                    child.AddNode(string.format("Grand Child %d-%d-%d", i, j, k));
+                }
+            }
+        }
+
 
         picturebox = new Picturebox(this, 440, 10, 240, 180);
+        picturebox.Name = "picturebox";
         picturebox.Image = testBitmap2;
 
         textbox = new Textbox(this, 240, 10, 150, 20);
+        textbox.Name = "textbox";
         textbox.Text = "Textbox1";
         textbox2 = new Textbox(this, 240, 40, 150, 20);
+        textbox2.Name = "textbox2";
         textbox2.Text = "Textbox2";
 
         //for(int i = 0; i < 30; ++i)
@@ -262,7 +350,7 @@ class MyWindow : Window
 
         for(int i = 0; i < children.count; ++i)
         {
-            Window child = children[i];
+            BaseWindow child = children[i];
             dropdown.Items.Add(child);
         }
 
@@ -272,31 +360,111 @@ class MyWindow : Window
         PopupMenu fileMenu = new PopupMenu();
         PopupMenu editMenu = new PopupMenu();
 
-        MenuItem open = new MenuItem("&Open", null);
+        MenuItem open = new MenuItem();
+        open.Text = "&Open";
         open.Clicked += new Delegate(this, MyWindow.Open_Clicked);
 
-        MenuItem save = new MenuItem("&Save", null);
+        MenuItem save = new MenuItem();
+        save.Text = "&Save";
         save.Clicked += new Delegate(this, MyWindow.Save_Clicked);
 
-        MenuItem exit = new MenuItem("E&xit", null);
+        MenuItem exit = new MenuItem();
+        exit.Text = "E&xit";
         exit.Clicked += new Delegate(this, MyWindow.Exit_Clicked);
 
-        fileMenu.AddItem(open);
-        fileMenu.AddItem(save);
-        fileMenu.AddItem(new MenuItem("-", null));
-        fileMenu.AddItem(exit);
+        fileMenu.items.add(open);
+        fileMenu.items.add(save);
+        MenuItem sep = new MenuItem();
+        sep.Text = "-";
+        fileMenu.items.add(sep);
+        fileMenu.items.add(exit);
 
-        editMenu.AddItem(new MenuItem("Undo", null));
-        editMenu.AddItem(new MenuItem("Redo", null));
-        editMenu.AddItem(new MenuItem("-", null));
-        editMenu.AddItem(new MenuItem("Cut", null));
-        editMenu.AddItem(new MenuItem("Copy", null));
-        editMenu.AddItem(new MenuItem("Paste", null));
+        MenuItem undo = new MenuItem();
+        undo.Text = "Undo";
+        editMenu.items.add(undo);
+        MenuItem redo = new MenuItem();
+        redo.Text = "Redo";
+        editMenu.items.add(redo);
+        MenuItem sep2 = new MenuItem();
+        sep2.Text = "-";
+        editMenu.items.add(sep2);
+        MenuItem cut = new MenuItem();
+        cut.Text = "Cut";
+        cut.Shortcut = SCK_CONTROL|'X';
+        cut.Clicked += new Delegate(this, MyWindow.EditMenuClicked);
+        editMenu.items.add(cut);
+        MenuItem copy = new MenuItem();
+        copy.Text = "Copy";
+        copy.Shortcut = SCK_CONTROL|'C';
+        copy.Clicked += new Delegate(this, MyWindow.EditMenuClicked);
+        editMenu.items.add(copy);
+        MenuItem paste = new MenuItem();
+        paste.Text = "Paste";
+        paste.Shortcut = SCK_CONTROL|'V';
+        paste.Clicked += new Delegate(this, MyWindow.EditMenuClicked);
+        editMenu.items.add(paste);
 
-        menu.AddItem(new MenuItem("File", fileMenu));
-        menu.AddItem(new MenuItem("Edit", editMenu));
+        MenuItem miFile = new MenuItem();
+        miFile.Text = "File";
+        miFile.SubMenu = fileMenu;
+        menu.items.add(miFile);
+        MenuItem miEdit = new MenuItem();
+        miEdit.Text = "Edit";
+        miEdit.SubMenu = editMenu;
+        menu.items.add(miEdit);
 
         this.Menu = menu;
+
+        /*file f = file.open("icon.png", "rb");
+        f.seek(0, SeekPos.End);
+        int size = f.position;
+        f.seek(0, SeekPos.Start);
+        byte *pngData = memory.alloc(size);
+        f.read(pngData, size);
+        f.close();
+
+        long icon = CreateIconFromResourceEx(
+            pngData,
+            size,
+            true,
+            0x00030000,
+            0,
+            0,
+            0x0000);
+
+        //SetWindowIcon(hWnd, icon);
+        SendMessageA(hWnd, WM_SETICON, ICON_SMALL, icon);
+
+        file f2 = file.open("icon_big.png", "rb");
+        f2.seek(0, SeekPos.End);
+        size = f2.position;
+        f2.seek(0, SeekPos.Start);
+        pngData = memory.alloc(size);
+        f2.read(pngData, size);
+        f2.close();
+
+        icon = CreateIconFromResourceEx(
+            pngData,
+            size,
+            true,
+            0x00030000,
+            0,
+            0,
+            0x0000 LR_DEFAULTCOLOR);
+
+        //SetWindowIcon(hWnd, icon);
+        SendMessageA(hWnd, WM_SETICON, ICON_BIG, icon);*/
+
+        SmallIcon = Icon.FromFile("icon.png");
+        BigIcon = Icon.FromFile("icon_big.png");
+
+    }
+
+    void EditMenuClicked(object sender, void *param)
+    {
+        MenuItem item = sender as MenuItem;
+        item.Checked = true;
+        MessageBox.Show(item.Text, "Edit", 0);
     }
 
     void Open_Clicked(object sender, void *args)
@@ -336,8 +504,6 @@ class MyWindow : Window
     {
         if(MessageBox.Show("Are you sure you want to exit?", "SparkUI", MsgFlags.Question | MsgFlags.YesNo) == 1)
         {
-            //PostQuitMessage(99);
-            //Close();
             Application.Exit(99);
         }
     }
@@ -365,7 +531,6 @@ class MyWindow : Window
 
     void OnDestroy()
     {
-        //PostQuitMessage(0);
         Application.Exit(0);
     }
 
@@ -446,15 +611,46 @@ class MyWindow : Window
         int newItemIndex = listbox.Items.Count + 1;
         listbox.Items.Add(string.format("New Item %d", newItemIndex));
     }
+
+    WindowEditorWindow editorWindow;
+    
+    void btnEditor_Clicked(object sender, void *param)
+    {
+        editorWindow = new WindowEditorWindow();
+        editorWindow.Show(SW_SHOW);
+    }
 }
+
+resource MenuEditorJson "MenuEditor.json";
+resource ShortcutEditorJson "ShortcutEditor.json";
 
 int WinStart(long hInstance, long hPrevInstance, byte *pstrCommandLine, int nCmdShow)
 {
+    RTTIModule module = RTTIModule.GetModule("SparkUIDemo");
+    array<string> names = module.EnumResources();
+
+    Log(names.join(", "));
+
+    RTTIResourceEntry *res = module.GetResource("MenuEditorJson");
+    if(res != null)
+    {
+        string json = new string(res.data);
+    }
+
+    RTTIClassType cls = RTTIType.GetType("Listbox") as RTTIClassType;
+    array<string> props = cls.EnumAllProperties();
+
+    Log(props.join(", "));
+
+    array<string> fields = cls.EnumAllFields();
+    Log(fields.join(", "));
+
     Window window = new MyWindow();
     window.width = 1280;
     window.height = 720;
 
-    window.Show(nCmdShow);
+    window.Show(SW_NORMAL);
 
-    return Application.Run();    
+    return Application.Run();
 }
+
