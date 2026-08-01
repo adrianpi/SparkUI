@@ -355,6 +355,30 @@ struct CHOOSECOLORA
     byte*   lpTemplateName;
 }
 
+// GDI+ structures and constants
+struct GdiplusStartupInput
+{
+    uint GdiplusVersion;
+    void* DebugEventCallback;
+    int SuppressBackgroundThread;
+    int SuppressExternalCodecs;
+}
+
+struct GdiplusStartupOutput
+{
+    void* NotificationHookProc;
+    void* NotificationUnhookProc;
+}
+
+const int Ok = 0;
+const int PixelFormat32bppARGB = 0x0026200A;
+const int PixelFormat24bppRGB = 0x00021808;
+
+// IStream COM interface constants
+const ulong STREAM_SEEK_SET = 0;
+const ulong STREAM_SEEK_CUR = 1;
+const ulong STREAM_SEEK_END = 2;
+
 // External functions from the Windows API
 void PostQuitMessage(int nExitCode) external;
 long DefWindowProcA(long hwnd, uint uMsg, ulong wParam, ulong lParam) external;
@@ -447,9 +471,31 @@ uint GetAsyncKeyState(int vKey) external;
 long CreateIconFromResourceEx(byte *pbIconBits, uint cbIconBits, int fIcon, uint dwVersion, int cxDesired, int cyDesired, uint uFlags) external;
 void DestroyIcon(long hIcon) external;
 
+// GDI+ external functions
+int GdiplusStartup(ulong* token, GdiplusStartupInput* input, GdiplusStartupOutput* output) external;
+void GdiplusShutdown(ulong token) external;
+int GdipCreateBitmapFromStream(void* stream, long* bitmap) external;
+int GdipGetImageWidth(long image, uint* width) external;
+int GdipGetImageHeight(long image, uint* height) external;
+int GdipGetImagePixelFormat(long image, int* format) external;
+int GdipBitmapLockBits(long bitmap, void* rect, uint flags, int format, void* lockedBitmapData) external;
+int GdipBitmapUnlockBits(long bitmap, void* lockedBitmapData) external;
+int GdipDisposeImage(long image) external;
+
 int MulDiv(int x, int y, int z)
 {
     return (int)(((long)x * (long)y) / (long)z);
+}
+
+// BitmapData structure for GDI+ bitmap locking
+struct BitmapData
+{
+    uint Width;
+    uint Height;
+    int Stride;
+    int PixelFormat;
+    void* Scan0;
+    ulong Reserved;
 }
 
 class Stream
@@ -618,6 +664,176 @@ class Brush
     }
 }
 
+struct STATSTG {
+    short*   pwcsName;
+    uint     type;
+    ulong    cbSize;
+    ulong    mtime;
+    ulong    ctime;
+    ulong    atime;
+    uint     grfMode;
+    uint     grfLocksSupported;
+    IID      clsid;
+    uint     grfStateBits;
+    uint     reserved;
+}
+
+[ComInterface("00000000-0000-0000-C000-000000000046")]
+class IUnknown
+{
+    virtual int QueryInterface(IID* riid, void** ppvObject);
+    virtual int AddRef();
+    virtual int Release();
+}
+
+[ComClass("00000000-0000-0000-0000-000000000000")]
+class IStreamWrapper : IUnknown
+{
+    int refCount = 1;
+    Stream stream;
+
+    IStreamWrapper constructor(Stream s)
+    {
+        this.stream = s;
+        return this;
+    }
+
+    virtual int QueryInterface(IID* riid, void** ppvObject)
+    {
+        IID iidUnk = GuidFromString("00000000-0000-0000-C000-000000000046");
+        IID iidStream = GuidFromString("0000000c-0000-0000-C000-000000000046");
+        if(GuidsEqual(*riid, iidUnk) || GuidsEqual(*riid, iidStream))
+        {
+            *ppvObject = this;
+            ++refCount;
+            return 0;
+        }
+        *ppvObject = null;
+        return 0x80004002; // E_NOINTERFACE
+    }
+
+    virtual int AddRef()
+    {
+        refCount++;
+        return refCount;
+    }
+
+    virtual int Release()
+    {
+        refCount--;
+        if(refCount == 0)
+        {
+            delete this;
+            return 0;
+        }
+        return refCount;
+    }
+
+    virtual int Read(void* pv, uint cb, uint* pcbRead)
+    {
+        if(stream == null)
+            return 0x80004005; // E_FAIL
+
+        int read = stream.Read(pv, (int)cb);
+        if(pcbRead != null)
+            *pcbRead = read > 0 ? cb : 0;
+
+        return read > 0 ? 0 : 1; // S_OK : S_FALSE
+    }
+
+    virtual int Write(void* pv, uint cb, uint* pcbWritten)
+    {
+        return 0x80004001; // E_NOTIMPL
+    }
+
+    virtual int Seek(long dlibMove, uint dwOrigin, ulong* plibNewPosition)
+    {
+        if(stream == null)
+            return 0x80004005; // E_FAIL
+
+        int origin = SeekPos.Start;
+        if(dwOrigin == STREAM_SEEK_CUR)
+            origin = SeekPos.Current;
+        else if(dwOrigin == STREAM_SEEK_END)
+            origin = SeekPos.End;
+
+        stream.Seek((int)dlibMove, origin);
+
+        if(plibNewPosition != null)
+            *plibNewPosition = (ulong)stream.Position;
+
+        return 0; // S_OK
+    }
+
+    virtual int SetSize(ulong libNewSize)
+    {
+        return 0x80004001; // E_NOTIMPL
+    }
+
+    virtual int CopyTo(void* pstm, ulong cb, ulong* pcbRead, ulong* pcbWritten)
+    {
+        return 0x80004001; // E_NOTIMPL
+    }
+
+    virtual int Commit(uint grfCommitFlags)
+    {
+        return 0; // S_OK
+    }
+
+    virtual int Revert()
+    {
+        return 0x80004001; // E_NOTIMPL
+    }
+
+    virtual int LockRegion(ulong libOffset, ulong cb, uint dwLockType)
+    {
+        return 0x80004001; // E_NOTIMPL
+    }
+
+    virtual int UnlockRegion(ulong libOffset, ulong cb, uint dwLockType)
+    {
+        return 0x80004001; // E_NOTIMPL
+    }
+
+    virtual int Stat(STATSTG* pstatstg, uint grfStatFlag)
+    {
+        if (!pstatstg)
+            return 0x80030009; //STG_E_INVALIDPOINTER;
+
+        memory.put(pstatstg, 0, sizeof(STATSTG));
+
+        long pos = stream.Position;
+        stream.Seek(0, SeekPos.End);
+        long size = stream.Position;
+        stream.Seek(pos, SeekPos.Start);
+
+        pstatstg.type = 2; // STGTY_STREAM;
+        pstatstg.cbSize = size;
+        pstatstg.grfMode = 0; //STGM_READ;
+
+        return 0; // S_OK
+    }
+
+    virtual int Clone(void** ppstm)
+    {
+        return 0x80004001; // E_NOTIMPL
+    }
+}
+
+// GDI+ initialization
+ulong gdiplusToken = 0;
+
+void InitializeGdiPlus()
+{
+    if(gdiplusToken == 0)
+    {
+        GdiplusStartupInput input = {};
+        input.GdiplusVersion = 1;
+        GdiplusStartupOutput output = {};
+        GdiplusStartup(&gdiplusToken, &input, &output);
+    }
+}
+
 class Bitmap
 {
     long hBitmap = 0;
@@ -732,53 +948,57 @@ class Bitmap
             bitmap.filepath = filename;
         }
         return bitmap;
-    }
+    }    
 
     private static bool LoadFromStream(Bitmap bitmap, Stream s)
     {
-        ushort bfType;
-        uint bfSize;
-        ushort bfReserved1;
-        ushort bfReserved2;
-        uint bfOffBits;
+        // Initialize GDI+ if not already done
+        InitializeGdiPlus();
 
-        s.Read(&bfType, sizeof(bfType));
-        s.Read(&bfSize, sizeof(bfSize));
-        s.Read(&bfReserved1, sizeof(bfReserved1));
-        s.Read(&bfReserved2, sizeof(bfReserved2));
-        s.Read(&bfOffBits, sizeof(bfOffBits));
+        // Create IStream wrapper
+        IStreamWrapper istream = new IStreamWrapper(s);
 
-        if(bfType != 0x4D42)
+        // Load bitmap using GDI+
+        long gdipBitmap = 0;
+        int status = GdipCreateBitmapFromStream(istream, &gdipBitmap);
+
+        // Release IStream wrapper
+        istream.Release();
+
+        if(status != Ok || gdipBitmap == 0)
         {
-            Log("Bitmap: Not a valid BMP file");
+            Log("Bitmap: Failed to load from stream using GDI+, status: %d", status);
             return false;
         }
 
-        // Read info header
-        BITMAPINFOHEADER infoHeader = {};
-        if(s.Read(&infoHeader, sizeof(infoHeader)) == 0)
-        {
-            Log("Bitmap: Failed to read info header");
-            return false;
-        }
+        // Get bitmap dimensions
+        uint width = 0;
+        uint height = 0;
+        GdipGetImageWidth(gdipBitmap, &width);
+        GdipGetImageHeight(gdipBitmap, &height);
 
-        // Validate bit depth
-        if(infoHeader.biBitCount != 24 && infoHeader.biBitCount != 32)
-        {
-            Log("Bitmap: Unsupported bit depth: %d", infoHeader.biBitCount);
-            return false;
-        }
+        // Get pixel format
+        int pixelFormat = 0;
+        GdipGetImagePixelFormat(gdipBitmap, &pixelFormat);
 
-        bitmap.width = infoHeader.biWidth;
-        bitmap.height = infoHeader.biHeight > 0 ? infoHeader.biHeight : -infoHeader.biHeight;
-        bitmap.bitsPerPixel = infoHeader.biBitCount;
+        // Determine bits per pixel (support 24bpp and 32bpp)
+        int bitsPerPixel = 32; // Default to 32bpp with alpha
+        if(pixelFormat == PixelFormat24bppRGB)
+            bitsPerPixel = 24;
 
+        bitmap.width = (int)width;
+        bitmap.height = (int)height;
+        bitmap.bitsPerPixel = bitsPerPixel;
+
+        // Create DIB section for the bitmap
         BITMAPINFO bmi = {};
-        bmi.bmiHeader = infoHeader;
-        bmi.bmiHeader.biHeight = -bitmap.height; // Top-down DIB
+        bmi.bmiHeader.biSize = 40;
+        bmi.bmiHeader.biWidth = bitmap.width;
+        bmi.bmiHeader.biHeight = -bitmap.height; // Top-down
+        bmi.bmiHeader.biPlanes = 1;
+        bmi.bmiHeader.biBitCount = (ushort)bitsPerPixel;
 
-        // For 32bpp, use BI_BITFIELDS with RGBA masks
-        if(bitmap.bitsPerPixel == 32)
+        if(bitsPerPixel == 32)
         {
             bmi.bmiHeader.biCompression = BI_BITFIELDS;
             bmi.bmiColors[0] = 0x00FF0000; // Red mask
@@ -796,80 +1016,62 @@ class Bitmap
 
         if(bitmap.hBitmap == 0)
         {
-            Log("Bitmap: Failed to create DIB section for %dbpp", bitmap.bitsPerPixel);
+            Log("Bitmap: Failed to create DIB section for %dbpp", bitsPerPixel);
+            GdipDisposeImage(gdipBitmap);
             return false;
         }
 
-        // Calculate row size (must be multiple of 4)
-        int rowSize = ((bitmap.width * bitmap.bitsPerPixel + 31) / 32) * 4;
-        int imageSize = rowSize * bitmap.height;
+        // Lock GDI+ bitmap bits for reading
+        BitmapData bitmapData = {};
+        int lockFormat = bitsPerPixel == 32 ? PixelFormat32bppARGB : PixelFormat24bppRGB;
+        status = GdipBitmapLockBits(gdipBitmap, null, 1/*ImageLockModeRead*/, lockFormat, &bitmapData);
 
-        byte* tempBuffer = (byte*)memory.alloc(imageSize);
-
-        // Skip to pixel data
-        uint skipBytes = bfOffBits - 54;
-        if(skipBytes > 0)
+        if(status != Ok)
         {
-            s.Seek(skipBytes, SeekPos.Current);
-        }
-
-        // Read pixel data
-        if(s.Read(tempBuffer, imageSize) == 0)
-        {
-            Log("Bitmap: Failed to read pixel data");
-            memory.free(tempBuffer);
+            Log("Bitmap: Failed to lock GDI+ bitmap bits, status: %d", status);
             DeleteObject(bitmap.hBitmap);
             bitmap.hBitmap = 0;
-            return null;
+            GdipDisposeImage(gdipBitmap);
+            return false;
         }
 
-        s.Close();
+        // Copy pixel data from GDI+ bitmap to DIB section
+        byte* src = (byte*)bitmapData.Scan0;
+        byte* dst = (byte*)bitmap.pBits;
+        int srcStride = bitmapData.Stride;
+        int dstStride = bitmap.width * (bitsPerPixel / 8);
 
-        // Copy and flip if bottom-up BMP
-        byte* dest = (byte*)bitmap.pBits;
-        int destRowSize = bitmap.width * (bitmap.bitsPerPixel / 8);
-
-        if(infoHeader.biHeight > 0) // Bottom-up
+        for(int y = 0; y < bitmap.height; y++)
         {
-            for(int y = 0; y < bitmap.height; y++)
-            {
-                byte* srcRow = tempBuffer + (bitmap.height - 1 - y) * rowSize;
-                byte* destRow = dest + y * destRowSize;
-                for(int x = 0; x < destRowSize; x++)
-                    destRow[x] = srcRow[x];
-            }
-        }
-        else // Top-down
-        {
-            for(int y = 0; y < bitmap.height; y++)
-            {
-                byte* srcRow = tempBuffer + y * rowSize;
-                byte* destRow = dest + y * destRowSize;
-                for(int x = 0; x < destRowSize; x++)
-                    destRow[x] = srcRow[x];
-            }
+            byte* srcRow = src + y * srcStride;
+            byte* dstRow = dst + y * dstStride;
+            for(int x = 0; x < dstStride; x++)
+                dstRow[x] = srcRow[x];
         }
 
-        if(bitmap.bitsPerPixel == 32)
+        // Pre-multiply alpha for 32bpp images
+        if(bitsPerPixel == 32)
         {
-            // pre-multiply alpha
             for(int i = 0; i < bitmap.width * bitmap.height; i++)
             {
-                ubyte* pixel = (ubyte*)dest + i * 4;
-                uint r = pixel[0];
+                ubyte* pixel = (ubyte*)dst + i * 4;
+                uint b = pixel[0];
                 uint g = pixel[1];
-                uint b = pixel[2];
+                uint r = pixel[2];
                 uint a = pixel[3];
-                if(a != 0)
+
+                if(a != 255)
                 {
-                    pixel[0] = (ubyte)((r * a) / 255U); // R
+                    pixel[0] = (ubyte)((b * a) / 255U); // B
                     pixel[1] = (ubyte)((g * a) / 255U); // G
-                    pixel[2] = (ubyte)((b * a) / 255U); // B
+                    pixel[2] = (ubyte)((r * a) / 255U); // R
                 }
             }
         }
 
-        memory.free(tempBuffer);
+        // Unlock and dispose GDI+ bitmap
+        GdipBitmapUnlockBits(gdipBitmap, &bitmapData);
+        GdipDisposeImage(gdipBitmap);
 
         return true;
     }
@@ -963,25 +1165,6 @@ class Icon
         if(icon != null)
             icon.filepath = fileName;
         return icon;
-        /*f.seek(0, SeekPos.End);
-        int size = f.position;
-        f.seek(0, SeekPos.Start);
-        byte* pngData = memory.alloc(size);
-        f.read(pngData, size);
-        f.close();
-
-        Icon icon = new Icon();
-
-        icon.hIcon = CreateIconFromResourceEx(
-            pngData,
-            size,
-            true,
-            0x00030000,
-            0,
-            0,
-            0x0000 LR_DEFAULTCOLOR);
-
-        return icon;*/
     }
 }
 

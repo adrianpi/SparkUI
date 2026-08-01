@@ -756,7 +756,7 @@ class BitmapPropertyEditor : PropertyEditor
     void OnButtonClicked(object sender, void* args)
     {
         OpenFileDialog dlg = new OpenFileDialog();
-        dlg.Filter = "Bitmap Files|*.bmp|All Files|*.*|";
+        dlg.Filter = "Image Files|*.bmp;*.png;*.jpg;*.gif|All Files|*.*|";
         dlg.Title = "Select Bitmap";
         if(dlg.Show(button.parent.parent))
         {
