@@ -82,6 +82,15 @@ class OpenFileDialog
         ofn.lpstrFilter = flt.c_str();
         ofn.lpstrTitle = title.c_str();
         int ok = GetOpenFileNameA(&ofn);
+
+        MSG msg;
+        while (PeekMessageA(&msg, null,
+                   0x0200, //WM_MOUSEFIRST,
+                   0x020A, //WM_MOUSELAST,
+                   1 /*PM_REMOVE*/))
+        {
+        }
+
         return ok != 0;
     }
 }
@@ -142,6 +151,15 @@ class SaveFileDialog
         ofn.lpstrTitle = title.c_str();
         ofn.lpstrDefExt = defaultExtension.c_str();
         int ok = GetSaveFileNameA(&ofn);
+
+        MSG msg;
+        while (PeekMessageA(&msg, null,
+                   0x0200, //WM_MOUSEFIRST,
+                   0x020A, //WM_MOUSELAST,
+                   1 /*PM_REMOVE*/))
+        {
+        }
+
         return ok != 0;
     }
 }
