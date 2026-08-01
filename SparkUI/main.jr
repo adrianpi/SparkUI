@@ -579,22 +579,28 @@ class MemoryStream : Stream
 
     int Read(void *buffer, int size)
     {
-        int remaining = (int)(this.buffer + capacity - ptr);
-        if(size > remaining)
-            return 0;
-        memory.copy(buffer, ptr, size);
-        ptr += size;
-        return 1;
+        if(Position + size > Length)
+            size = Length - Position;
+
+        if(size > 0)
+        {
+            memory.copy(buffer, ptr, size);
+            ptr += size;
+        }
+        return size;
     }
 
     int Write(void *buffer, int size)
     {
-        int remaining = (int)(this.buffer + capacity - ptr);
-        if(size > remaining)
-            return 0;
-        memory.copy(ptr, buffer, size);
-        ptr += size;
-        return 1;
+        if(Position + size > Length)
+            size = Length - Position;
+
+        if(size > 0)
+        {
+            memory.copy(ptr, buffer, size);
+            ptr += size;
+        }
+        return size;
     }
 
     void Seek(int offset, int origin)
@@ -739,13 +745,10 @@ class IStreamWrapper : IUnknown
         if(stream == null)
             return 0x80004005; // E_FAIL
 
-        // don't try to read past the end
-        if(stream.Position + cb > stream.Length)
-            cb = (uint)(stream.Length - stream.Position);
-
         int read = stream.Read(pv, (int)cb);
+        
         if(pcbRead != null)
-            *pcbRead = read > 0 ? cb : 0;
+            *pcbRead = read;
 
         return read > 0 ? 0 : 1; // S_OK : S_FALSE
     }
@@ -811,13 +814,8 @@ class IStreamWrapper : IUnknown
 
         memory.put(pstatstg, 0, sizeof(STATSTG));
 
-        long pos = stream.Position;
-        stream.Seek(0, SeekPos.End);
-        long size = stream.Position;
-        stream.Seek(pos, SeekPos.Start);
-
         pstatstg.type = 2; // STGTY_STREAM;
-        pstatstg.cbSize = size;
+        pstatstg.cbSize = stream.Length;
         pstatstg.grfMode = 0; //STGM_READ;
 
         return 0; // S_OK
@@ -1048,7 +1046,8 @@ class Bitmap
         byte* src = (byte*)bitmapData.Scan0;
         byte* dst = (byte*)bitmap.pBits;
         int srcStride = bitmapData.Stride;
-        int dstStride = bitmap.width * (bitsPerPixel / 8);
+        // DIB scan lines must be DWORD-aligned (multiple of 4 bytes)
+        int dstStride = ((bitmap.width * (bitsPerPixel / 8) + 3) / 4) * 4;
 
         for(int y = 0; y < bitmap.height; y++)
         {
