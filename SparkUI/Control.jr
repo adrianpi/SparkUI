@@ -223,7 +223,15 @@ class Control : BaseWindow
                 return base(hwnd, uMsg, wParam, lParam);
             }
         }*/
+        else if(uMsg == WM_CTLCOLOREDIT)
+        {
+            long hdcEdit = wParam;
 
+            SetTextColor(hdcEdit, WindowDefaults.TextboxForeColor);
+            SetBkColor(hdcEdit, WindowDefaults.TextboxBackColor);
+
+            return WindowDefaults.TextboxBackBrush.hBrush;
+        }
         else
         {
             return base(hwnd, uMsg, wParam, lParam);
