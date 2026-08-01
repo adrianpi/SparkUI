@@ -232,6 +232,7 @@ const uint SCK_SHIFT = 1U<<31U;
 const int ICON_SMALL = 0;
 const int ICON_BIG = 1;
 
+const int HALFTONE = 4;
 
 struct WNDCLASSA
 {
@@ -399,6 +400,7 @@ long CreateWindowExA(
     void* lpParam
 ) external;
 short GetMessageA(MSG* lpMsg, long hWnd, uint wMsgFilterMin, uint wMsgFilterMax) external;
+short PeekMessageA(MSG* lpMsg, long hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg) external;
 void TranslateMessage(MSG* lpMsg) external;
 void DispatchMessageA(MSG* lpMsg) external;
 void ShowWindow(long hWnd, int nCmdShow) external;
@@ -435,6 +437,9 @@ int DeleteDC(long hdc) external;
 long CreateDIBSection(long hdc, BITMAPINFO* pbmi, uint usage, void** ppvBits, long hSection, uint offset) external;
 int BitBlt(long hdcDest, int x, int y, int cx, int cy, long hdcSrc, int x1, int y1, uint rop) external;
 int StretchBlt(long hdcDest, int xDest, int yDest, int wDest, int hDest, long hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc, uint rop) external;
+int SetStretchBltMode(long hdc, int mode) external;
+int SetBrushOrgEx(long hdc, int x, int y, POINT* lppt) external;
+
 long LoadImageA(long hInst, byte* name, uint type, int cx, int cy, uint fuLoad) external;
 int GetObjectA(long h, int c, void* pv) external;
 int AlphaBlend(long hdcDest, int xDest, int yDest, int wDest, int hDest, long hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc, long blendFunc) external;
@@ -733,6 +738,10 @@ class IStreamWrapper : IUnknown
     {
         if(stream == null)
             return 0x80004005; // E_FAIL
+
+        // don't try to read past the end
+        if(stream.Position + cb > stream.Length)
+            cb = (uint)(stream.Length - stream.Position);
 
         int read = stream.Read(pv, (int)cb);
         if(pcbRead != null)
@@ -1302,7 +1311,10 @@ class Canvas
             }
             else
             {
+                int prev = SetStretchBltMode(hdc, HALFTONE);
+                SetBrushOrgEx(hdc, 0, 0, null);
                 StretchBlt(hdc, x, y, width, height, memDC, 0, 0, bitmap.width, bitmap.height, SRCCOPY);
+                SetStretchBltMode(hdc, prev);
             }
         }
 
