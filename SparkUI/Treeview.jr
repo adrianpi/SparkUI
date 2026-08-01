@@ -18,6 +18,7 @@ class TreeNode
 		treeView.Invalidate();
 	}
 
+	[Browsable(false)]
 	public array<TreeNode> get Nodes() => nodes;
 
 	public bool get Expanded() => expanded;
@@ -91,6 +92,7 @@ class Treeview : Control
 	private int totalItems;
 	public Event NodeSelected = new Event();
 
+	[Browsable(false)]
 	public array<TreeNode> get Nodes() => nodes;
 
 	bool get Border() => border;
