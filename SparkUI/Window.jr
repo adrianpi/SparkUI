@@ -137,7 +137,7 @@ void DestroyMenu(long hMenu) external;
 int DrawTextA(long hdc, byte* lpString, int nCount, RECT* lpRect, uint uFormat) external;
 long GetWindowDC(long hWnd) external;
 int IsWindow(long hWnd) external;
-long MonitorFromPoint(long pt, uint dwFlags) external;
+long MonitorFromPoint(POINT pt, uint dwFlags) external;
 int GetMonitorInfoA(long hMonitor, MONITORINFO* lpmi) external;
 int SetWindowTextA(long hWnd, byte* lpString) external;
 long SetParent(long hWndChild, long hWndNewParent) external;
@@ -1215,8 +1215,7 @@ class Dialog : Window
         POINT pt = {};
         if(GetCursorPos(&pt))
         {
-            long ptl = *(long*)&pt;
-            long hMon = MonitorFromPoint(ptl, MONITOR_DEFAULTTONEAREST);
+            long hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
             if(hMon != 0)
             {
                 MONITORINFO mi = {};
