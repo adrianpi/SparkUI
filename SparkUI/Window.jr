@@ -209,9 +209,8 @@ class MenuItem
         {
             if(checked && radioGroup != 0)
             {
-                for(int i = 0; i < parentMenu.items.count; ++i)
+                foreach(MenuItem other : parentMenu.items)
                 {
-                    MenuItem other = parentMenu.items[i];
                     if(other == this)
                         continue;
                     if(other.radioGroup == radioGroup)
@@ -337,9 +336,8 @@ class MenuBase
         DestroyMenu(hMenu);
         hMenu = 0;
 
-        for(int i = 0; i < items.count; ++i)
+        foreach(MenuItem item : items)
         {
-            MenuItem item = items[i];
             if(item.SubMenu != null)
                 item.SubMenu.Invalidate();
         }
@@ -350,9 +348,8 @@ class MenuBase
         if(hMenu == 0)
         {
             hMenu = CreateHandle();
-            for(int i = 0; i < items.count; ++i)
+            foreach(MenuItem item : items)
             {
-                MenuItem item = items[i];
                 item.parentMenu = this;
                 if(item.text == "-")
                 {
@@ -734,13 +731,13 @@ class BaseWindow
 
     BaseWindow GetChildByName(string name)
     {
-        for(int i = 0; i < children.count; ++i)
+        foreach(BaseWindow child : children)
         {
-            if(children[i].name != null && children[i].name == name)
-                return children[i];
-            if(children.getClassType().HasAttribute("AcceptChildren"))
+            if(child.name != null && child.name == name)
+                return child;
+            if(child.getClassType().HasAttribute("AcceptChildren"))
             {
-                BaseWindow found = children[i].GetChildByName(name);
+                BaseWindow found = child.GetChildByName(name);
                 if(found != null)
                     return found;
             }

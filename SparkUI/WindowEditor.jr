@@ -190,9 +190,8 @@ class WindowEditorWindow : Window
         clsNames.add("HScrollbar");
         clsNames.add("VScrollbar");
 
-        for(int i = 0; i < clsNames.count; ++i)
+        foreach(string clsName : clsNames)
         {
-            string clsName = clsNames[i];
             MenuItem mi = new MenuItem();
             mi.Text = clsName;
             mi.Clicked += new Delegate(target, handler);
@@ -426,9 +425,8 @@ class MenuEditor : Dialog
 
     void LoadSubMenu(MenuBase menu, TreeNode parentNode)
     {
-        for(int i = 0; i < menu.items.count; ++i)
+        foreach(MenuItem item : menu.items)
         {
-            MenuItem item = menu.items[i];
             TreeNode node = parentNode.AddNode(item.Name);
             node.Data = item;
             if(item.SubMenu != null)
@@ -709,9 +707,8 @@ class ShortcutEditor : Dialog
         if(shortcut & SCK_SHIFT)
             chkShift.Checked = true;
 
-        for(int i = 0; i < shortcuts.count; ++i)
+        foreach(uint sc : shortcuts)
         {
-            uint sc = shortcuts[i];
             string t = MenuItem.GetShortcutText(sc);
             ddKey.Items.Add(t);
             if(sc == (shortcut & 0xFFFF))

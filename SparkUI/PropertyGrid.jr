@@ -388,9 +388,9 @@ class EnumPropertyEditor : DropdownPropertyEditor
         if(enumType != null)
         {
             array<string> names = enumType.EnumValues();
-            for(int i = 0; i < names.count; ++i)
+            foreach(string name : names)
             {
-                result.add(names[i]);
+                result.add(name);
             }
         }
         return result;
@@ -818,7 +818,7 @@ class BitmapPropertyEditor : PropertyEditor
         {
             int w, h;
             h = height;
-            w = value.width * height / value.height;
+            w = value.height != 0 ? value.width * height / value.height : 0;
             canvas.DrawBitmap(x, y+3, w, h, value);
         }
     }
@@ -1042,9 +1042,9 @@ class CollectionEditor : Dialog
             string types = property.GetAttributeString("AcceptTypes");
             array<string> typeNames = types.split(",");
             typeNames.sort();
-            for(int i = 0; i < typeNames.count; ++i)
+            foreach(string name : typeNames)
             {
-                ddItemType.Items.Add(typeNames[i]);
+                ddItemType.Items.Add(name);
             }
             ddItemType.SelectedIndex = 0;
         }

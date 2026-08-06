@@ -54,15 +54,15 @@ class TreeNode
 	public void ExpandAll()
 	{
 		Expand();
-		for(int i = 0; i < nodes.count; ++i)
-			nodes[i].ExpandAll();
+		foreach(TreeNode node : nodes)
+			node.ExpandAll();
 	}
 
 	public void CollapseAll()
 	{
 		Collapse();
-		for(int i = 0; i < nodes.count; ++i)
-			nodes[i].CollapseAll();
+		foreach(TreeNode node : nodes)
+			node.CollapseAll();
 	}
 
 	public TreeNode AddNode(string text)
@@ -212,9 +212,9 @@ class Treeview : Control
 		{
 			dx += 16;
 
-			for(int i = 0; i < node.Nodes.count; ++i)
+			foreach(TreeNode child : node.Nodes)
 			{
-				DrawNode(canvas, node.Nodes[i]);
+				DrawNode(canvas, child);
 			}
 
 			dx -= 16;
@@ -227,9 +227,9 @@ class Treeview : Control
 		dy = -vscroll.Position * 20;
 		totalItems = 0;
 
-		for(int i = 0; i < nodes.count; ++i)
+		foreach(TreeNode node : nodes)
 		{
-			DrawNode(canvas, nodes[i]);
+			DrawNode(canvas, node);
 		}
 
 		if(border)
@@ -276,9 +276,9 @@ class Treeview : Control
 		{
 			dx += 16;
 
-			for(int i = 0; i < node.Nodes.count; ++i)
+			foreach(TreeNode child : node.Nodes)
 			{
-				if(HitTest(x, y, node.Nodes[i]))
+				if(HitTest(x, y, child))
 					return true;
 			}
 
@@ -293,9 +293,9 @@ class Treeview : Control
 			dx = 4;
 			dy = -vscroll.Position * 20;
 
-			for(int i = 0; i < nodes.count; ++i)
+			foreach(TreeNode node : nodes)
 			{
-				if(HitTest(x, y, nodes[i]))
+				if(HitTest(x, y, node))
 					break;
 			}
 		}
